@@ -1,0 +1,679 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documento Final: Sistema de Gestión y Pedido de Comida</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f0f2f5, #e0e6ed);
+            color: #333;
+        }
+        header {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1517248135467-2c7ed3ab7223');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-align: center;
+            padding: 60px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .container {
+            width: 85%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 30px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        h1 { font-size: 3em; margin: 0; }
+        h2 { font-size: 2em; color: #2980b9; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h3 { font-size: 1.5em; color: #16a085; }
+        p, li { font-weight: 300; }
+        nav.sticky-nav {
+            background: linear-gradient(to right, #34495e, #2c3e50);
+            padding: 15px 0;
+            text-align: center;
+            border-radius: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline;
+            margin: 0 20px;
+        }
+        nav ul li a {
+            text-decoration: none;
+            color: #ecf0f1;
+            font-weight: 700;
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+        nav ul li a:hover {
+            color: #1abc9c;
+        }
+        section {
+            margin-bottom: 60px;
+            padding: 25px;
+            background: #fefefe;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+        section:hover {
+            transform: translateY(-5px);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #dfe4ea;
+            color: #2c3e50;
+        }
+        .mermaid {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        pre code {
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            margin: 15px 0;
+            display: block;
+        }
+        pre + button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .download-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #1abc9c;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .tech-stack ul {
+            list-style: none;
+            padding: 0;
+        }
+        .tech-stack li {
+            margin: 15px 0;
+            font-size: 1.1em;
+        }
+        .tech-stack li i {
+            color: #3498db;
+            margin-right: 10px;
+        }
+        .tech-stack li strong {
+            color: #2c3e50;
+        }
+        .tech-stack ul ul {
+            margin-top: 10px;
+            margin-left: 30px;
+        }
+        .tech-stack ul ul li {
+            font-size: 1em;
+            color: #555;
+        }
+        .tech-stack ul ul li i {
+            color: #1abc9c;
+        }
+        @media (max-width: 768px) {
+            .container { width: 90%; padding: 20px; }
+            nav ul li { margin: 0 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Sistema de Gestión y Pedido de Comida</h1>
+        <p>Una solución full-stack para restaurantes y clientes</p>
+    </header>
+    <div class="container">
+        <nav class="sticky-nav" role="navigation" aria-label="Menú principal">
+            <ul>
+                <li><a href="#vision_general" aria-label="Ir a Visión General">Visión General</a></li>
+                <li><a href="#arquitectura" aria-label="Ir a Arquitectura">Arquitectura</a></li>
+                <li><a href="#modelado" aria-label="Ir a Modelado y Diseño">Modelado y Diseño</a></li>
+                <li><a href="#funcionalidades" aria-label="Ir a Funcionalidades">Funcionalidades</a></li>
+                <li><a href="#roles" aria-label="Ir a Roles">Roles</a></li>
+                <li><a href="#seguridad" aria-label="Ir a Seguridad">Seguridad</a></li>
+                <li><a href="#diagramas" aria-label="Ir a Diagramas">Diagramas</a></li>
+            </ul>
+        </nav>
+
+        <section id="vision_general" aria-labelledby="vision_general_heading">
+            <h2 id="vision_general_heading">Visión General del Proyecto</h2>
+            <p>Este proyecto desarrolla un sistema full-stack para la gestión de restaurantes y pedidos de comida en línea. Incluye un panel de administración para propietarios y un sitio web para clientes, permitiendo buscar restaurantes, explorar menús y realizar pedidos.</p>
+        </section>
+
+        <section id="arquitectura" aria-labelledby="arquitectura_heading">
+            <h2 id="arquitectura_heading">Arquitectura General y Tecnologías</h2>
+            <p>El sistema está construido con una arquitectura en capas, integrando tecnologías modernas para garantizar escalabilidad, seguridad y una experiencia de usuario fluida.</p>
+            <div class="tech-stack">
+                <ul>
+                    <li><i class="fas fa-server"></i><strong>Backend</strong>: Implementado con Spring Boot, siguiendo una arquitectura en capas (Model, Repository, Service, Controller).
+                        <ul>
+                            <li><i class="fas fa-database"></i>Spring Data JPA: Gestiona la persistencia de datos.</li>
+                            <li><i class="fas fa-shield-alt"></i>Spring Security: Autenticación con JWT y codificación con BCrypt.</li>
+                            <li><i class="fas fa-exchange-alt"></i>APIs REST: Comunicación con frontend y servicios externos.</li>
+                        </ul>
+                    </li>
+                    <li><i class="fas fa-laptop-code"></i><strong>Frontend</strong>: Desarrollado con React.js, utilizando herramientas modernas para una interfaz dinámica.
+                        <ul>
+                            <li><i class="fas fa-cogs"></i>Redux: Gestión centralizada del estado.</li>
+                            <li><i class="fas fa-plug"></i>Axios: Comunicación con APIs REST.</li>
+                            <li><i class="fas fa-paint-brush"></i>Tailwind CSS y Material UI: Diseño responsivo.</li>
+                        </ul>
+                    </li>
+                    <li><i class="fas fa-database"></i><strong>Base de Datos</strong>: MySQL, configurada con <code>spring.jpa.hibernate.ddl-auto=update</code>.</li>
+                    <li><i class="fas fa-cloud"></i><strong>Servicios Externos</strong>: Integraciones con servicios de terceros.
+                        <ul>
+                            <li><i class="fas fa-images"></i><strong>Cloudinary</strong>: Almacenamiento de imágenes.</li>
+                            <li><i class="fas fa-credit-card"></i><strong>Stripe</strong>: Procesamiento de pagos.</li>
+                            <li><i class="fas fa-envelope"></i><strong>Email</strong>: Notificaciones.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="modelado" aria-labelledby="modelado_heading">
+            <h2 id="modelado_heading">Modelado y Diseño</h2>
+            <p>El backend sigue el patrón MVC/Capas, mientras que el frontend utiliza componentes reutilizables y Redux. La base de datos MySQL se basa en entidades JPA con relaciones definidas.</p>
+            <h3>Entidades y Atributos</h3>
+            <table>
+                <tr><th>Entidad</th><th>Atributos</th></tr>
+                <tr><td>User</td><td>id, fullName, email, password, role, orders, favorites, addresses, status</td></tr>
+                <tr><td>Restaurant</td><td>id, owner, name, description, cuisineType, address, contactInformation, openingHours, reviews, orders, numRating, images, registrationDate, open, foods</td></tr>
+                <tr><td>Food</td><td>id, name, description, price, foodCategory, images, available, restaurant, isVegetarian, isSeasonal, ingredients, creationDate</td></tr>
+                <tr><td>FoodCategory</td><td>id, name, restaurant</td></tr>
+                <tr><td>IngredientCategory</td><td>id, name, restaurant, ingredients</td></tr>
+                <tr><td>IngredientsItem</td><td>id, name, category, restaurant, inStock</td></tr>
+                <tr><td>Event</td><td>id, image, startedAt, endsAt, name, restaurant, location</td></tr>
+                <tr><td>Order</td><td>id, customer, restaurant, totalAmount, orderStatus, createdAt, deliveryAddress, items, payment, totalItem, totalPrice</td></tr>
+                <tr><td>OrderItem</td><td>id, food, quantity, totalPrice, ingredients</td></tr>
+                <tr><td>Cart</td><td>id, customer, items, total</td></tr>
+                <tr><td>CartItem</td><td>id, cart, food, quantity, ingredients, totalPrice</td></tr>
+            </table>
+            <h3>Ejemplo de Entidad JPA: User</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String fullName;
+    private String email;
+    private String password;
+    private String role;
+    @OneToMany(mappedBy = "customer")
+    private List<Order> orders;
+    @ElementCollection
+    private List<String> favorites;
+    @OneToMany(mappedBy = "user")
+    private List<Address> addresses;
+    private String status;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Ejemplo de Entidad JPA: Restaurant</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+public class Restaurant {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private User owner;
+    private String name;
+    private String description;
+    private String cuisineType;
+    private String address;
+    private String contactInformation;
+    private String openingHours;
+    @OneToMany(mappedBy = "restaurant")
+    private List<Review> reviews;
+    @OneToMany(mappedBy = "restaurant")
+    private List<Order> orders;
+    private Double numRating;
+    @ElementCollection
+    private List<String> images;
+    private LocalDate registrationDate;
+    private Boolean open;
+    @OneToMany(mappedBy = "restaurant")
+    private List<Food> foods;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Ejemplo de Entidad JPA: Order</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @ManyToOne
+    @JoinColumn(name = "customer_id")
+    private User customer;
+    @ManyToOne
+    @JoinColumn(name = "restaurant_id")
+    private Restaurant restaurant;
+    private Double totalAmount;
+    private String orderStatus;
+    private LocalDateTime createdAt;
+    private String deliveryAddress;
+    @OneToMany(mappedBy = "order")
+    private List<OrderItem> items;
+    @OneToOne
+    private Payment payment;
+    private Integer totalItem;
+    private Double totalPrice;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Ejemplo de Entidad JPA: Food</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+public class Food {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String description;
+    private Double price;
+    @ManyToOne
+    @JoinColumn(name = "food_category_id")
+    private FoodCategory foodCategory;
+    @ElementCollection
+    private List<String> images;
+    private Boolean available;
+    @ManyToOne
+    @JoinColumn(name = "restaurant_id")
+    private Restaurant restaurant;
+    private Boolean isVegetarian;
+    private Boolean isSeasonal;
+    @ManyToMany
+    private List<IngredientsItem> ingredients;
+    private LocalDate creationDate;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Ejemplo de Entidad JPA: Cart</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+public class Cart {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @OneToOne
+    @JoinColumn(name = "customer_id")
+    private User customer;
+    @OneToMany(mappedBy = "cart")
+    private List<CartItem> items;
+    private Double total;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Ejemplo de Entidad JPA: OrderItem</h3>
+            <pre><code class="language-java">
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+public class OrderItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @ManyToOne
+    @JoinColumn(name = "food_id")
+    private Food food;
+    private Integer quantity;
+    private Double totalPrice;
+    @ElementCollection
+    private List<String> ingredients;
+    @ManyToOne
+    @JoinColumn(name = "order_id")
+    private Order order;
+}
+            </code></pre>
+            <button onclick="copyCode(this)">Copiar</button>
+            <h3>Relaciones</h3>
+            <ul>
+                <li><strong>User</strong>: Tiene muchos <em>Orders</em>, <em>Addresses</em>, y un <em>Cart</em>.</li>
+                <li><strong>Restaurant</strong>: Pertenece a un <em>User</em> (owner), tiene muchos <em>Foods</em>, <em>Orders</em>, <em>Events</em>.</li>
+                <li><strong>Food</strong>: Pertenece a un <em>Restaurant</em> y una <em>FoodCategory</em>, tiene muchos <em>IngredientsItem</em>.</li>
+                <li><strong>Order</strong>: Pertenece a un <em>User</em> (customer) y un <em>Restaurant</em>, tiene muchos <em>OrderItem</em>.</li>
+                <li><strong>Cart</strong>: Pertenece a un <em>User</em>, tiene muchos <em>CartItem</em>.</li>
+            </ul>
+        </section>
+
+        <section id="funcionalidades" aria-labelledby="funcionalidades_heading">
+            <h2 id="funcionalidades_heading">Funcionalidades Clave</h2>
+            <h3>Cliente</h3>
+            <ul>
+                <li>Registro e inicio de sesión.</li>
+                <li>Explorar restaurantes y menús con filtros (vegetariano, de temporada).</li>
+                <li>Añadir ítems al carrito y realizar pedidos con Stripe.</li>
+                <li>Gestionar perfil: historial, favoritos, direcciones.</li>
+            </ul>
+            <h3>Propietario de Restaurante</h3>
+            <ul>
+                <li>Gestionar restaurante: detalles, estado (abierto/cerrado).</li>
+                <li>Gestionar menú: añadir/eliminar ítems, cambiar disponibilidad.</li>
+                <li>Gestionar ingredientes y categorías.</li>
+                <li>Crear y eliminar eventos.</li>
+                <li>Actualizar estado de pedidos.</li>
+            </ul>
+            <h3>Casos de Uso: Cliente</h3>
+            <table>
+                <tr><th>Caso de Uso</th><th>Descripción</th><th>Pasos</th></tr>
+                <tr>
+                    <td>Filtrar Menú Vegetariano</td>
+                    <td>El cliente busca alimentos vegetarianos en un restaurante.</td>
+                    <td>
+                        1. Selecciona restaurante.<br>
+                        2. Aplica filtro "Vegetariano".<br>
+                        3. Visualiza ítems disponibles.
+                    </td>
+                </tr>
+                <tr>
+                    <td>Realizar Pedido</td>
+                    <td>El cliente completa un pedido con pago.</td>
+                    <td>
+                        1. Añade ítems al carrito.<br>
+                        2. Selecciona dirección de entrega.<br>
+                        3. Procede al pago con Stripe.
+                    </td>
+                </tr>
+            </table>
+            <h3>Vistas de la Interfaz</h3>
+            <p>[Nota: Agregar imágenes de la interfaz, como el panel de administración y la página de menú, en producción.]</p>
+        </section>
+
+        <section id="roles" aria-labelledby="roles_heading">
+            <h2 id="roles_heading">Roles y Actores</h2>
+            <p>Roles principales: <strong>Cliente</strong> y <strong>Propietario de Restaurante</strong>. Futuros roles: Repartidor, Gerente, Personal.</p>
+        </section>
+
+        <section id="seguridad" aria-labelledby="seguridad_heading">
+            <h2 id="seguridad_heading">Seguridad</h2>
+            <p>El sistema implementa medidas robustas para proteger datos y usuarios.</p>
+            <h3>Medidas de Seguridad</h3>
+            <table>
+                <tr><th>Aspecto</th><th>Implementación</th></tr>
+                <tr><td>Autenticación</td><td>JWT con Spring Security</td></tr>
+                <tr><td>Contraseñas</td><td>Codificación con BCrypt</td></tr>
+                <tr><td>Protección CSRF</td><td>Tokens CSRF en formularios</td></tr>
+                <tr><td>Protección XSS</td><td>Validación y escape de entradas</td></tr>
+            </table>
+        </section>
+
+        <section id="diagramas" aria-labelledby="diagramas_heading">
+            <h2 id="diagramas_heading">Diagramas</h2>
+            <h3>Diagrama de Modelo Relacional</h3>
+            <div class="mermaid" onclick="alert('Diagrama de modelo relacional: muestra las tablas y relaciones de la base de datos.')">
+                erDiagram
+                    USER ||--o{ ORDER : places
+                    USER ||--o{ ADDRESS : has
+                    USER ||--o{ CART : owns
+                    USER ||--o{ RESTAURANT : owns
+                    RESTAURANT ||--o{ FOOD : offers
+                    RESTAURANT ||--o{ ORDER : receives
+                    RESTAURANT ||--o{ EVENT : hosts
+                    FOOD ||--o{ ORDER_ITEM : included_in
+                    FOOD ||--o{ CART_ITEM : included_in
+                    ORDER ||--o{ ORDER_ITEM : contains
+                    CART ||--o{ CART_ITEM : contains
+                    FOOD_CATEGORY ||--o{ FOOD : categorizes
+                    INGREDIENT_CATEGORY ||--o{ INGREDIENTS_ITEM : categorizes
+                    USER {
+                        Long id PK
+                        String fullName
+                        String email
+                        String password
+                        String role
+                    }
+                    RESTAURANT {
+                        Long id PK
+                        Long owner_id FK
+                        String name
+                        String description
+                        Boolean open
+                    }
+                    FOOD {
+                        Long id PK
+                        Long restaurant_id FK
+                        String name
+                        Double price
+                        Boolean isVegetarian
+                    }
+            </div>
+            <h3>Diagrama de Clases</h3>
+            <div class="mermaid" onclick="alert('Diagrama de clases: representa las entidades y sus relaciones en el backend.')">
+                classDiagram
+                    User "1" --> "*" Order
+                    User "1" --> "*" Address
+                    User "1" --> "1" Cart
+                    User "1" --> "*" Restaurant : owner
+                    Restaurant "1" --> "*" Food
+                    Restaurant "1" --> "*" Order
+                    Restaurant "1" --> "*" Event
+                    Food "1" --> "*" OrderItem
+                    Food "1" --> "*" CartItem
+                    Order "1" --> "*" OrderItem
+                    Cart "1" --> "*" CartItem
+                    FoodCategory "1" --> "*" Food
+                    IngredientCategory "1" --> "*" IngredientsItem
+                    class User {
+                        -id: Long
+                        -fullName: String
+                        -email: String
+                        -password: String
+                        -role: String
+                    }
+                    class Restaurant {
+                        -id: Long
+                        -name: String
+                        -description: String
+                        -cuisineType: String
+                        -open: Boolean
+                    }
+                    class Food {
+                        -id: Long
+                        -name: String
+                        -price: Double
+                        -available: Boolean
+                        -isVegetarian: Boolean
+                    }
+            </div>
+            <h3>Diagrama de Casos de Uso</h3>
+            <div class="mermaid" onclick="alert('Diagrama de casos de uso: muestra las interacciones de los actores con el sistema.')">
+                graph TD
+                    A[Cliente] --> B[Realizar Pedido]
+                    A --> C[Explorar Menús]
+                    A --> D[Gestionar Perfil]
+                    E[Propietario] --> F[Gestionar Restaurante]
+                    E --> G[Gestionar Pedidos]
+                    E --> H[Crear Eventos]
+            </div>
+            <h3>Diagrama de Secuencia: Realizar Pedido</h3>
+            <div class="mermaid" onclick="alert('Diagrama de secuencia: describe el flujo para realizar un pedido.')">
+                sequenceDiagram
+                    participant C as Cliente
+                    participant R as ReactApp
+                    participant O as OrderController
+                    participant D as Database
+                    C->>R: Añade al carrito y paga
+                    R->>O: POST /api/orders/create
+                    O->>D: Verifica disponibilidad y crea orden
+                    D-->>O: Orden creada
+                    O-->>R: URL de pago (Stripe)
+                    R->>C: Redirige a Stripe
+            </div>
+            <h3>Diagrama de Actividad: Gestionar Restaurante</h3>
+            <div class="mermaid" onclick="alert('Diagrama de actividad: muestra el flujo para gestionar un restaurante.')">
+                graph TD
+                    A[Inicio] --> B[Iniciar sesión]
+                    B --> C[Panel de administración]
+                    C --> D{Gestionar}
+                    D --> E[Editar restaurante]
+                    D --> F[Gestionar menú]
+                    E --> G[Guardar cambios]
+                    F --> G
+                    G --> H[Fin]
+            </div>
+            <h3>Diagrama de Despliegue</h3>
+            <div class="mermaid" onclick="alert('Diagrama de despliegue: representa la infraestructura física del sistema.')">
+                graph TD
+                    A[Cliente] -->|HTTPS| B[Frontend: React]
+                    B -->|API REST| C[Backend: Spring Boot]
+                    C -->|JDBC| D[MySQL]
+                    C -->|HTTP| E[Cloudinary]
+                    C -->|HTTP| F[Stripe]
+                    C -->|SMTP| G[Email Service]
+            </div>
+        </section>
+    </div>
+    <button class="download-btn" onclick="downloadPDF()">Descargar como PDF</button>
+    <script>
+        // Inicializar Mermaid
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({ startOnLoad: true });
+            } else {
+                console.error('Mermaid no está definido. Asegúrate de que el script se cargó correctamente.');
+            }
+        });
+
+        // Función para copiar código
+        function copyCode(button) {
+            const code = button.previousElementSibling.querySelector('code').textContent;
+            navigator.clipboard.writeText(code);
+            button.textContent = '¡Copiado!';
+            setTimeout(() => button.textContent = 'Copiar', 2000);
+        }
+
+        // Función para descargar PDF
+        function downloadPDF() {
+            if (typeof html2pdf === 'undefined') {
+                console.error('html2pdf no está definido. Asegúrate de que el script se cargó correctamente.');
+                alert('Error: No se pudo cargar la librería para generar el PDF. Por favor, intenta de nuevo.');
+                return;
+            }
+            const element = document.body.cloneNode(true);
+            element.querySelector('.download-btn').remove(); // Excluir el botón del PDF
+            const opt = {
+                margin: 0.5,
+                filename: 'Sistema_Gestion_Pedido_Comida.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save().catch(err => {
+                console.error('Error al generar el PDF:', err);
+                alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+            });
+        }
+    </script>
+</body>
+</html>

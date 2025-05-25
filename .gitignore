@@ -1,0 +1,11 @@
+# Ignorar archivos de sistema
+.DS_Store
+
+# Ignorar archivos generados por IDEs
+.idea/
+*.iml
+
+# Ignorar archivos de compilación
+Online-Food-Ordering-Backend/target/
+Online-Food-Ordering-Frontend/node_modules/
+Online-Food-Ordering-Frontend/build/
