@@ -64,7 +64,7 @@ public class User {
      * Rol del usuario, definido por el enum USER_ROLE.
      * Puede ser cliente, propietario de restaurante o administrador.
      */
-    private USER_ROLE role;
+    private USER_ROLE role=USER_ROLE.ROLE_CUSTOMER; // Por defecto, un usuario es cliente;
 
     /**
      * Lista de órdenes asociadas al usuario.

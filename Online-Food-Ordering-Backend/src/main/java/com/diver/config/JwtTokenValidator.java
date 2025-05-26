@@ -7,80 +7,87 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.coyote.BadRequestException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * ✅ Filtro personalizado que intercepta cada solicitud HTTP para validar el token JWT.
+ * <p>
+ * ✅ Este filtro:
+ * - Extrae el token JWT desde el header "Authorization".
+ * - Valida la firma y la expiración del token.
+ * - Extrae los claims del token (email y roles).
+ * - Establece la autenticación en el contexto de Spring Security.
+ */
 public class JwtTokenValidator extends OncePerRequestFilter {
+
     /**
-     * @param request // Solicitud HTTP
-     * @param response // Respuesta HTTP
-     * @param filterChain  // Filtro de secuencia de peticiones HTTP
-     * @throws ServletException // Excepción si ocurre algún error durante la ejecución del filtro
-     * @throws IOException // el error de entrada/salida durante la ejecución del filtro
+     * 🔁 Este método se ejecuta una sola vez por cada solicitud entrante.
+     *
+     * @param request  La solicitud HTTP recibida.
+     * @param response La respuesta HTTP que se devolverá.
+     * @param filterChain La cadena de filtros de seguridad.
+     *
+     * @throws ServletException Si ocurre un error al ejecutar el filtro.
+     * @throws IOException Si ocurre un error de entrada/salida.
      */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        // Aquí se puede agregar lógica de filtro antes de que la solicitud continúe a través de la cadena
-        // Por ejemplo, se puede agregar código para autenticar al usuario, registrar la solicitud,
-        // modificar la solicitud o la respuesta, etc.
 
-        // Después de realizar las operaciones de filtro necesarias, se llama al metodo nextFilter de filterChain
-        // para permitir que la solicitud continúe a través de la cadena hacia el recurso final
-        //filterChain.doFilter(request, response);
+        // ✅ 1. Obtener el token JWT desde la cabecera Authorization
+        String jwt = request.getHeader(JwtConstant.JWT_HEADER); // ejemplo: "Bearer eyJhbGciOi..."
 
-        // Obtener el token JWT de la solicitud
-        String jwt=request.getHeader(JwtConstant.JWT_HEADER);
-
-        if (jwt !=null){
-
-            // Eliminar el prefijo "Bearer " del token JWT para obtener solo el token
-            jwt = jwt.substring(7);
-
-            // Validar el token JWT
+        // 🔐 2. Verificar que el header exista y comience con "Bearer "
+        if (jwt != null && jwt.startsWith("Bearer ")) {
             try {
+                // ✂️ 3. Eliminar el prefijo "Bearer " (7 caracteres)
+                jwt = jwt.substring(7); // ahora solo contiene el token JWT puro
 
-                // keys.hmacShaKeyFor() genera una clave secreta a partir de una
-                // cadena de bytes que se usa para firmar el token
-                SecretKey key= Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
+                // 🔑 4. Generar la clave secreta para verificar la firma del JWT
+                SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes(StandardCharsets.UTF_8));
 
-                Claims claims= Jwts.parserBuilder()// Inicia configuración del validador de JWT
-                                   .setSigningKey(key)// Define la clave secreta para firmar el token
-                                   .build()
-                                   .parseClaimsJws(jwt) // Parsea el token JWT y extrae los claims (información del token)
-                                   .getBody(); // Obtiene los claims del token
+                // 🧾 5. Validar y parsear el JWT
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(key)      // Establece la clave para validar la firma
+                        .build()                 // Construye el parser
+                        .parseClaimsJws(jwt)     // Valida firma, formato y expiración
+                        .getBody();              // Obtiene los claims (payload) del token
 
+                // 📧 6. Extraer información útil del token
+                String email = claims.get("email", String.class);             // Identificador del usuario
+                String authorities = claims.get("authorities", String.class); // Ejemplo: "ROLE_USER,ROLE_ADMIN"
 
-                String email=String.valueOf(claims.get("email"));
-                String authorities=String.valueOf(claims.get("authorities"));
+                // 🔓 7. Convertir los roles en una lista de objetos GrantedAuthority
+                List<GrantedAuthority> auth = AuthorityUtils.commaSeparatedStringToAuthorityList(authorities);
 
-                // Convertir el string de autoridades en una lista de objetos GrantedAuthority
-                // El metodo AuthorityUtils.commaSeparatedStringToAuthorityList() convierte una cadena de autoridades
-                // separadas por comas en una lista de objetos GrantedAuthority
-                List<GrantedAuthority> auth= AuthorityUtils.commaSeparatedStringToAuthorityList(authorities);
+                // 🔐 8. Crear un objeto Authentication con email y roles
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        email, // Principal (usuario autenticado)
+                        null,  // Credenciales (null porque no lo necesitamos en JWT)
+                        auth   // Lista de roles/autorizaciones
+                );
 
-
-
-
+                // ✅ 9. Registrar la autenticación en el contexto de seguridad
+                SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                throw new BadRequestException("Token JWT inválido......");
+                // ❌ Si el token está mal formado, expirado o alterado
+                throw new RuntimeException("❌ Token JWT inválido o expirado", e);
             }
-
-            // Si el token JWT es válido, se puede continuar con la solicitud
-            filterChain.doFilter(request, response);
-
         }
 
-
-
-
+        // 🔄 10. Continuar con la cadena de filtros (siempre debe llamarse)
+        filterChain.doFilter(request, response);
     }
 }

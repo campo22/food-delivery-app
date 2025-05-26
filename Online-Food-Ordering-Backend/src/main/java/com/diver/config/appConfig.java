@@ -50,7 +50,7 @@ public class appConfig {
                         .hasAnyRole("RESTAURANTE_OWNER", "ADMIN") // Solo estos roles pueden acceder a rutas admin
                         .requestMatchers("api/**")
                         .authenticated() // Requiere autenticación JWT para otras rutas bajo /api/
-                        .anyRequest()
+                        .anyRequest()// el enyRequest() es para cualquier otra ruta que no sea /api/ o /api/admin
                         .permitAll() // Todo lo demás (ej. rutas públicas) es accesible sin autenticación
                 )
 
