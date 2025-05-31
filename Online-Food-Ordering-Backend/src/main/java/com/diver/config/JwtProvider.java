@@ -1,5 +1,6 @@
 package com.diver.config;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.Authentication;
@@ -27,14 +28,29 @@ public class JwtProvider {
         String roles = populateAuthorities( authorities );
 
         String token = Jwts.builder()// el Jbuilder que se encarga de construir el token JWT
-                .setExpiration((new Date(new Date().getTime()+ JwtConstant.EXPIRATION_TIME) ))
+                .setExpiration((new Date(new Date().getTime()+ JwtConstant.EXPIRATION_TIME) )) // tiempo de expiración del token (24 horas)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .claim( "email", auth.getName() ) // email del usuario autenticado")
                 .claim("roles", roles) // roles del usuario autenticado
                 .signWith(key) // clave para firmar el token
-                .compact();
+                .compact(); // compacta el token en una cadena
 
         return token;
+    }
+    // método para obtener el email del usuario desde el token JWT
+    public String  getUsernameFromToken(String token) {
+
+        token= token.substring(7); // elimina el prefijo "Bearer " (7 caracteres)
+
+        Claims claims =Jwts.parserBuilder()// el Jbuilder que se encarga de construir el token JWT
+                .setSigningKey(key) // clave para verificar la firma del token
+                .build() // construye el parser
+                .parseClaimsJws(token) // parsea el token y obtiene los claims
+                .getBody();
+
+        String email = claims.get("email", String.class);
+        return email;
+
     }
 
     /**

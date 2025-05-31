@@ -58,7 +58,7 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                 SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes(StandardCharsets.UTF_8));
 
                 // 🧾 5. Validar y parsear el JWT
-                Claims claims = Jwts.parserBuilder()
+                Claims claims = Jwts.parserBuilder()// Construye un parser de JWT
                         .setSigningKey(key)      // Establece la clave para validar la firma
                         .build()                 // Construye el parser
                         .parseClaimsJws(jwt)     // Valida firma, formato y expiración
