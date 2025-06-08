@@ -37,7 +37,7 @@ public class JwtProvider {
 
         return token;
     }
-    // método para obtener el email del usuario desde el token JWT
+    //  Obtiene el email del usuario autenticado a partir del token JWT
     public String  getUsernameFromToken(String token) {
 
         token= token.substring(7); // elimina el prefijo "Bearer " (7 caracteres)

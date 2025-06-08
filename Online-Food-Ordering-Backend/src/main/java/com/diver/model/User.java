@@ -3,6 +3,7 @@ package com.diver.model;
 
 import com.diver.dto.RestaurantDto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -57,7 +58,10 @@ public class User {
 
     /**
      * Contraseña de la cuenta del usuario.
+     * Este campo es protegido con @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+     * para evitar que se muestre en la serialización JSON.
      */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     /**
