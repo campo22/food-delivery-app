@@ -9,6 +9,7 @@ import com.diver.repository.UserRepository;
 import com.diver.request.LoginRequest;
 import com.diver.response.AuthResponse;
 import com.diver.service.CustomerUserDetailsService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -75,6 +76,10 @@ public class AuthController {
   * @return ResponseEntity con el token JWT y datos de autenticación
   * @throws Exception si el email ya existe en el sistema o hay errores de autenticación
   */
+ @Operation(
+         summary = "Crear un nuevo usuario",
+         description = "Se puede registrar un nuevo usuario al sistema."
+ )
  @PostMapping("/signup")
  public ResponseEntity<AuthResponse> createUserHandle(@RequestBody User user) throws Exception {
 
@@ -145,6 +150,10 @@ public class AuthController {
   * @return ResponseEntity con el token JWT y datos de autenticación
   * @throws BadCredentialsException si las credenciales son incorrectas
   */
+ @Operation(
+         summary = "Loguearse usuario existente",
+         description = "Los usuario ya registrados pueden loguearse en el sistema"
+ )
  @PostMapping("/signin")
  public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) {
 
