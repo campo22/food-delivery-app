@@ -82,47 +82,43 @@ public class AuthController {
  )
  @PostMapping("/signup")
  public ResponseEntity<AuthResponse> createUserHandle(@RequestBody User user) throws Exception {
-
   try {
-   // 1️⃣ Verificar si el email ya está registrado
-   User isEmailExist = userRepository.findByEmail(user.getEmail());
-   if (isEmailExist != null) {
+   // 1️⃣ Verificar si el correo ya está registrado
+   User existingUser = userRepository.findByEmail(user.getEmail());
+   if (existingUser != null) {
     throw new Exception("Este email ya existe en el sistema");
    }
 
-   // 2️⃣ Crear el usuario y asignar los campos necesarios
-   User createdUser = new User();
-   createdUser.setEmail(user.getEmail());
-   createdUser.setFullName(user.getFullName());
-   createdUser.setPassword(passwordEncoder.encode(user.getPassword()));
+   // 2️⃣ Crear nuevo usuario con los datos recibidos
+   User newUser = new User();
+   newUser.setEmail(user.getEmail());
+   newUser.setFullName(user.getFullName());
+   newUser.setPassword(passwordEncoder.encode(user.getPassword()));
 
-   // 3️⃣ Asignar el rol recibido en la petición (por defecto CUSTOMER si es null)
-   if (user.getRole() != null) {
-    createdUser.setRole(user.getRole());
-   } else {
-    createdUser.setRole(USER_ROLE.ROLE_CUSTOMER); // Rol por defecto
-   }
+   // 3️⃣ Asignar rol (o usar ROLE_CUSTOMER por defecto)
+   USER_ROLE roleToAssign = user.getRole() != null ? user.getRole() : USER_ROLE.ROLE_CUSTOMER;
+   newUser.setRole(roleToAssign);
 
-   // 4️⃣ Guardar el usuario
-   User savedUser = userRepository.save(createdUser);
+   // 4️⃣ Guardar el usuario en la base de datos
+   User savedUser = userRepository.save(newUser);
 
-   // 5️⃣ Crear carrito vacío asociado al usuario
+   // 5️⃣ Crear carrito de compras vacío asociado al usuario
    Cart cart = new Cart();
    cart.setCustomer(savedUser);
    cartRepository.save(cart);
 
-   // 6️⃣ Autenticar al usuario recién creado
+   // 6️⃣ Autenticar al usuario recién registrado
    Authentication authentication = authenticationManager.authenticate(
            new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword())
    );
 
-   // 7️⃣ Guardar la autenticación en el contexto de seguridad
+   // 7️⃣ Registrar la autenticación en el contexto de seguridad
    SecurityContextHolder.getContext().setAuthentication(authentication);
 
    // 8️⃣ Generar el token JWT
    String jwt = jwtProvider.generateToken(authentication);
 
-   // 9️⃣ Preparar la respuesta
+   // 9️⃣ Preparar y devolver la respuesta
    AuthResponse authResponse = new AuthResponse();
    authResponse.setJwt(jwt);
    authResponse.setMessage("¡Usuario creado exitosamente!");
@@ -131,11 +127,11 @@ public class AuthController {
    return new ResponseEntity<>(authResponse, HttpStatus.CREATED);
 
   } catch (Exception e) {
-   // Log del error y re-lanzamiento con mensaje más específico
-   System.err.println("Error durante el registro: " + e.getMessage());
-   throw new Exception("Error en el proceso de registro: " + e.getMessage());
+   System.err.println("Error en el proceso de registro: " + e.getMessage());
+   throw new Exception("Error al registrar usuario: " + e.getMessage());
   }
  }
+
 
  /**
   * Autentica un usuario existente en el sistema.
@@ -156,56 +152,48 @@ public class AuthController {
  )
  @PostMapping("/signin")
  public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) {
-
   try {
-   // 1️⃣ Autenticar al usuario con Spring Security
+   // 1️⃣ Autenticar al usuario usando Spring Security
    Authentication authentication = authenticationManager.authenticate(
-           new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
+           new UsernamePasswordAuthenticationToken(
+                   req.getEmail(), req.getPassword()
+           )
    );
 
+   // 2️⃣ Obtener el primer rol del usuario (GrantedAuthority)
+   String fullRole = authentication.getAuthorities()
+           .stream()
+           .findFirst()
+           .map(GrantedAuthority::getAuthority) // Ej: "ROLE_RESTAURANT_OWNER"
+           .orElse("ROLE_CUSTOMER");            // Valor por defecto si no hay roles
 
-
-   // 3️⃣ Obtener el rol (primer authority de la lista)
-   Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-   String role = null;
-
-   if (!authorities.isEmpty()) {
-    String fullRole = authorities.iterator().next().getAuthority();
-    // Remover prefijo "ROLE_" si existe para obtener solo el nombre del rol
-    role = fullRole.startsWith("ROLE_") ? fullRole.substring(5) : fullRole;
+   // 3️⃣ Convertir a enum USER_ROLE (asegurándote que coincida exactamente con los valores del enum)
+   USER_ROLE userRole;
+   try {
+    userRole = USER_ROLE.valueOf(fullRole); // Usa directamente el rol con prefijo
+   } catch (IllegalArgumentException e) {
+    System.err.println("Rol no reconocido: " + fullRole + ", se usará ROLE_CUSTOMER por defecto");
+    userRole = USER_ROLE.ROLE_CUSTOMER;
    }
 
-   // 4️⃣ Generar el token JWT
+   // 4️⃣ Generar token JWT para el usuario autenticado
    String jwt = jwtProvider.generateToken(authentication);
 
-   // 5️⃣ Preparar la respuesta
+   // 5️⃣ Preparar y retornar la respuesta
    AuthResponse authResponse = new AuthResponse();
    authResponse.setJwt(jwt);
    authResponse.setMessage("Autenticación exitosa");
-
-   // Convertir el rol a enum de forma segura
-   try {
-    if (role != null) {
-     authResponse.setRole(USER_ROLE.valueOf(role));
-    } else {
-     authResponse.setRole(USER_ROLE.ROLE_CUSTOMER); // Rol por defecto
-    }
-   } catch (IllegalArgumentException e) {
-    // Si el rol no es válido, asignar CUSTOMER por defecto
-    System.err.println("Rol inválido encontrado: " + role + ". Asignando CUSTOMER por defecto.");
-    authResponse.setRole(USER_ROLE.ROLE_CUSTOMER);
-   }
+   authResponse.setRole(userRole);
 
    return new ResponseEntity<>(authResponse, HttpStatus.OK);
 
   } catch (BadCredentialsException e) {
-   // Log del error de credenciales
-   System.err.println("Intento de login fallido para email: " + req.getEmail());
+   System.err.println("Intento fallido de login para email: " + req.getEmail());
    throw new BadCredentialsException("Email o contraseña incorrectos");
   } catch (Exception e) {
-   // Log de errores inesperados
    System.err.println("Error inesperado durante el login: " + e.getMessage());
    throw new RuntimeException("Error interno durante la autenticación", e);
   }
  }
+
 }
