@@ -17,4 +17,9 @@ public class Address {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id; // ID de la dirección
+
+    private String street; // Calle
+    private String city; // Ciudad
+    private String state; // Estado
+
 }

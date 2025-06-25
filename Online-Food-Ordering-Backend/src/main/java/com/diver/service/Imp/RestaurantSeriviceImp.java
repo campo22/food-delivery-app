@@ -8,8 +8,10 @@ import com.diver.repository.AddressRepository;
 import com.diver.repository.RestaurantRepository;
 import com.diver.request.CreateRestaurantRequest;
 import com.diver.service.RestaurantService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,9 +38,17 @@ public class RestaurantSeriviceImp implements RestaurantService {
      * @return Restaurante creado.
      */
     @Override
+    @Transactional
     public Restaurant createRestaurant(CreateRestaurantRequest req, User user) {
 
-        Address address= addressRepository.save(req.getAddress());
+        if(req.getName()== null || req.getAddress()== null){
+            throw new IllegalArgumentException("nombre y direccion son campos obligatorios");
+        }
+
+        Address address= null;
+        if (req.getAddress() != null) {
+            address= addressRepository.save(req.getAddress());
+        }
 
         Restaurant restaurant= new Restaurant();
         restaurant.setAddress(address);
@@ -63,22 +73,57 @@ public class RestaurantSeriviceImp implements RestaurantService {
      * @throws Exception si ocurre un error durante la actualización.
      */
     @Override
+    @Transactional
     public Restaurant updateRestaurant(Long id, CreateRestaurantRequest updateRequest) throws Exception {
 
         Restaurant restaurant= findRestaurantById(id);
 
-        if(restaurant.getCuisineType()!=updateRequest.getCuisineType()){
+
+        // Si el tipo de cocina proporcionado en la solicitud de actualización no es nulo
+        // y es diferente al tipo de cocina actual del restaurante, actualiza el tipo de cocina.
+        if (updateRequest.getCuisineType() != null && !updateRequest.getCuisineType()
+                .equals(restaurant.getCuisineType())) {
             restaurant.setCuisineType(updateRequest.getCuisineType());
         }
-
-
-        if(restaurant.getDescription()!=updateRequest.getDescription()){
+        if (updateRequest.getDescription() != null && !updateRequest.getDescription()
+                .equals(restaurant.getDescription())) {
             restaurant.setDescription(updateRequest.getDescription());
         }
-
-
-        if(restaurant.getName()!=updateRequest.getName()){
+        if (updateRequest.getName() != null && !updateRequest.getName().equals(restaurant.getName())) {
             restaurant.setName(updateRequest.getName());
+        }
+        if (updateRequest.getContactInformation() != null && !updateRequest.getContactInformation()
+                .equals(restaurant.getContactInformation())) {
+            restaurant.setContactInformation(updateRequest.getContactInformation());
+        }
+        if (updateRequest.getImages() != null && !updateRequest.getImages().equals(restaurant.getImages())) {
+            restaurant.setImages(updateRequest.getImages());
+        }
+        if (updateRequest.getOpeningHours() != null && !updateRequest.getOpeningHours()
+                .equals(restaurant.getOpeningHours())) {
+            restaurant.setOpeningHours(updateRequest.getOpeningHours());
+        }
+        // actualizar la direccion
+        if (updateRequest.getAddress() != null) {
+            Address newAddress = updateRequest.getAddress();
+
+            if (newAddress.getStreet() == null || newAddress.getCity() == null || newAddress.getState() == null) {
+                throw new IllegalArgumentException("La dirección debe contener calle, ciudad y estado.");
+            }
+            if (restaurant.getAddress() !=null) {
+
+                Address exiting = restaurant.getAddress();
+                if (newAddress.getStreet() !=null) exiting.setStreet(newAddress.getStreet());
+                if (newAddress.getCity() !=null) exiting.setCity(newAddress.getCity());
+                if (newAddress.getState() !=null) exiting.setState(newAddress.getState());
+
+                addressRepository.save(exiting);
+            } else {
+                addressRepository.save(newAddress);
+                restaurant.setAddress(newAddress);
+
+            }
+
         }
 
         return restaurantRepository.save(restaurant);
@@ -162,5 +207,12 @@ public class RestaurantSeriviceImp implements RestaurantService {
     @Override
     public Restaurant updateRestaurantStatus(Long id) throws Exception {
         return null;
+    }
+
+    // metodos auxiliares
+    public class RestaurantNotFoundException extends Exception {
+        public RestaurantNotFoundException(String message) {
+            super(message);
+        }
     }
 }
