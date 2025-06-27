@@ -43,7 +43,7 @@ public interface RestaurantService {
          * Busca restaurantes según criterios definidos.
          * @return Lista de restaurantes encontrados.
          */
-        public List <Restaurant> searchRestaurants();
+        public List <Restaurant> searchRestaurants(String keyword);
 
         /**
          * Busca un restaurante por su ID.
