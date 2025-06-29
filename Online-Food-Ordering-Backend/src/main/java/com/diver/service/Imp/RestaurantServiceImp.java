@@ -213,16 +213,22 @@ public class RestaurantServiceImp implements RestaurantService {
         dto.setTitle(restaurant.getName());
         dto.setDescription(restaurant.getDescription());
         dto.setImages(restaurant.getImages());
-        if (user.getFavorites() != null && user.getFavorites().contains(dto)) {
-            throw new RestaurantNotFoundException("El restaurante ya está en favoritos");
-        } else {
-            if (user.getFavorites() == null) {
-                user.setFavorites(new ArrayList<>());
-            }
-            user.getFavorites().add(dto);
-            userRepository.save(user);
+
+        if (user.getFavorites()==null) {
+            user.setFavorites(new ArrayList<>());
         }
+
+        // Verificar si el restaurante ya esta en favoritos
+        boolean isFavorite = user.getFavorites().stream()
+                .anyMatch(favorite -> favorite.getId().equals(dto.getId()));
+        if (isFavorite) {
+            throw new RestaurantNotFoundException("Restaurante ya se encuentra en favoritos");
+        }
+        user.getFavorites().add(dto);
+        userRepository.save(user);
+
         return dto;
+
     }
 
     /**
