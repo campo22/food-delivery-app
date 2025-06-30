@@ -7,75 +7,81 @@ import com.diver.request.CreateRestaurantRequest;
 
 import java.util.List;
 
-public interface RestaurantService {
 
-    /**
-         * Crea un nuevo restaurante con la información proporcionada.
-         * @param req Datos para crear el restaurante.
-         * @param user Usuario que crea el restaurante.
+public interface RestaurantService {
+/**
+         * Crea un nuevo restaurante asociado al usuario proporcionado.
+         *
+         * @param req  Datos para crear el restaurante.
+         * @param user Usuario que realiza la operación.
          * @return Restaurante creado.
          */
-        public Restaurant createRestaurant(CreateRestaurantRequest req, User user);
+        Restaurant createRestaurant(CreateRestaurantRequest req, User user);
 
         /**
-         * Actualiza la información de un restaurante existente.
-         * @param id ID del restaurante a actualizar.
-         * @param updateRequest Datos actualizados del restaurante.
+         * Actualiza un restaurante existente identificado por su ID, validando el usuario.
+         *
+         * @param id             ID del restaurante a actualizar.
+         * @param updateRequest  Datos actualizados del restaurante.
+         * @param user           Usuario que realiza la operación.
          * @return Restaurante actualizado.
-         * @throws Exception si ocurre un error durante la actualización.
          */
-        public Restaurant updateRestaurant(Long id, CreateRestaurantRequest updateRequest) throws Exception ;
+        Restaurant updateRestaurant(Long id, CreateRestaurantRequest updateRequest, User user);
 
         /**
-         * Elimina un restaurante por su ID.
-         * @param id ID del restaurante a eliminar.
-         * @throws Exception si ocurre un error durante la eliminación.
+         * Elimina un restaurante por su ID, validando el usuario.
+         *
+         * @param id   ID del restaurante a eliminar.
+         * @param user Usuario que realiza la operación.
          */
-        public void deleteRestaurant(Long id) throws Exception;
+        void deleteRestaurant(Long id, User user);
 
         /**
          * Obtiene la lista de todos los restaurantes.
+         *
          * @return Lista de restaurantes.
          */
-        public List <Restaurant> getAllRestaurants();
+        List<Restaurant> getAllRestaurants();
 
         /**
-         * Busca restaurantes según criterios definidos.
-         * @return Lista de restaurantes encontrados.
+         * Busca restaurantes por palabra clave.
+         *
+         * @param keyword Palabra clave para buscar.
+         * @return Lista de restaurantes que coinciden.
          */
-        public List <Restaurant> searchRestaurants(String keyword);
+        List<Restaurant> searchRestaurants(String keyword);
 
         /**
          * Busca un restaurante por su ID.
+         *
          * @param id ID del restaurante.
-         * @return Restaurante encontrado.
-         * @throws Exception si no se encuentra el restaurante.
+         * @return Restaurante encontrado o null si no existe.
          */
-        public Restaurant findRestaurantById(Long id) throws Exception;
+        Restaurant findRestaurantById(Long id);
 
         /**
-         * Obtiene el restaurante asociado a un usuario.
+         * Obtiene el restaurante asociado a un usuario por su ID.
+         *
          * @param userId ID del usuario.
-         * @return Restaurante del usuario.
-         * @throws Exception si no se encuentra el restaurante.
+         * @return Restaurante asociado al usuario.
          */
-        public Restaurant getRestaurantByUserId(Long userId) throws Exception;
+        Restaurant getRestaurantByUserId(Long userId);
 
         /**
-         * Agrega un restaurante a la lista de favoritos de un usuario.
+         * Agrega un restaurante a la lista de favoritos del usuario.
+         *
          * @param restaurantId ID del restaurante.
-         * @param user Usuario que agrega el favorito.
-         * @return DTO del restaurante agregado a favoritos.
-         * @throws Exception si ocurre un error.
+         * @param user         Usuario que realiza la operación.
+         * @return DTO del restaurante actualizado.
          */
-        public RestaurantDto addToFavorite(Long restaurantId, User user) throws Exception;
+        RestaurantDto addToFavorite(Long restaurantId, User user);
 
         /**
-         * Actualiza el estado de un restaurante.
-         * @param id ID del restaurante.
+         * Actualiza el estado de un restaurante, validando el usuario.
+         *
+         * @param id   ID del restaurante.
+         * @param user Usuario que realiza la operación.
          * @return Restaurante con el estado actualizado.
-         * @throws Exception si ocurre un error.
          */
-        public Restaurant updateRestaurantStatus(Long id) throws Exception;
-
+        Restaurant updateRestaurantStatus(Long id, User user);
 }
