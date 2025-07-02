@@ -111,13 +111,26 @@ public class RestaurantServiceImp implements RestaurantService {
 
         log.info("Usuario '{}' actualizando el restaurante '{}' (ID: {}).", user.getEmail(), restaurant.getName(), id);
 
-        // Mapeo inteligente: solo se actualizan los campos presentes en la solicitud.
         Optional.ofNullable(updateRequest.getName()).ifPresent(restaurant::setName);
         Optional.ofNullable(updateRequest.getDescription()).ifPresent(restaurant::setDescription);
         Optional.ofNullable(updateRequest.getCuisineType()).ifPresent(restaurant::setCuisineType);
-        // ... (añadir el resto de campos que se pueden actualizar)
+        Optional.ofNullable(updateRequest.getContactInformation()).ifPresent(restaurant::setContactInformation);
+        Optional.ofNullable(updateRequest.getOpeningHours()).ifPresent(restaurant::setOpeningHours);
+        Optional.ofNullable(updateRequest.getImages()).ifPresent(restaurant::setImages);
+        if (updateRequest.getAddress() != null) {
+            Address newAddress = updateRequest.getAddress();
+            if (restaurant.getAddress() != null) {
+                restaurant.getAddress().setStreet(newAddress.getStreet());
+                restaurant.getAddress().setCity(newAddress.getCity());
+                restaurant.getAddress().setState(newAddress.getState());
+                addressRepository.save(restaurant.getAddress());
+            } else {
+                restaurant.setAddress(addressRepository.save(newAddress));
+            }
+        }
 
         return restaurantRepository.save(restaurant);
+
     }
 
     /**

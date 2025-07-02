@@ -9,8 +9,12 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -37,7 +41,7 @@ import java.util.List;
 @Data // Lombok: genera getters, setters, toString, equals, hashCode y constructor requerido.
 @AllArgsConstructor // Lombok: genera constructor con todos los atributos.
 @NoArgsConstructor  // Lombok: genera constructor sin parámetros.
-public class User {
+public class User implements UserDetails {
 
     /**
      * Identificador único del usuario.
@@ -99,4 +103,89 @@ public class User {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Address> addresses = new ArrayList<>();
 
+    // =================================================================================
+    // --- IMPLEMENTACIÓN DE LOS MÉTODOS DE LA INTERFAZ UserDetails ---
+    // =================================================================================
+
+    /**
+     * Devuelve los permisos concedidos al usuario. Spring Security utiliza esta información
+     * para las comprobaciones de autorización (p. ej., @PreAuthorize("hasRole('ADMIN')")).
+     *
+     * @return una colección de {@link GrantedAuthority} que representan los roles del usuario.
+     */
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Convertimos nuestro enum USER_ROLE en un objeto que Spring Security entiende.
+        // El método .name() del enum nos da el String, ej: "ROLE_ADMIN".
+        if (role == null) {
+            return List.of(); // Devolver una lista vacía si no hay rol para evitar NullPointerException.
+        }
+        return List.of(new SimpleGrantedAuthority(role.name()));
+    }
+
+    /**
+     * Devuelve la contraseña utilizada para autenticar al usuario.
+     *
+     * @return el hash de la contraseña del usuario.
+     */
+    @Override
+    public String getPassword() {
+        return this.password;
+    }
+
+    /**
+     * Devuelve el nombre de usuario utilizado para autenticar al usuario. En nuestro caso,
+     * utilizamos el correo electrónico como identificador único.
+     *
+     * @return el email del usuario.
+     */
+    @Override
+    public String getUsername() {
+        return this.email;
+    }
+
+    /**
+     * Indica si la cuenta del usuario ha expirado. Una cuenta expirada no puede ser autenticada.
+     * Para la mayoría de los casos, devolver 'true' es suficiente.
+     *
+     * @return {@code true} si la cuenta es válida (no ha expirado).
+     */
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    /**
+     * Indica si el usuario está bloqueado o desbloqueado. Un usuario bloqueado no puede ser autenticado.
+     * Para la mayoría de los casos, devolver 'true' es suficiente.
+     *
+     * @return {@code true} si la cuenta no está bloqueada.
+     */
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    /**
+     * Indica si las credenciales del usuario (contraseña) han expirado.
+     * Para la mayoría de los casos, devolver 'true' es suficiente.
+     *
+     * @return {@code true} si las credenciales no han expirado.
+     */
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    /**
+     * Indica si el usuario está habilitado o deshabilitado. Un usuario deshabilitado no puede ser autenticado.
+     *
+     * @return {@code true} si el usuario está habilitado.
+     */
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }
+
+

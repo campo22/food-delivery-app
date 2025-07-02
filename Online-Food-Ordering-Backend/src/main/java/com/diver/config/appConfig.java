@@ -1,16 +1,19 @@
 package com.diver.config;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -25,8 +28,14 @@ import java.util.Collections;
  */
 @Configuration
 @EnableWebSecurity // Habilita la seguridad web en la aplicación (equivalente a WebSecurityConfigurerAdapter)
+@EnableMethodSecurity   // Habilita la seguridad a nivel de metodo (para @PreAuthorize
+@AllArgsConstructor
 public class appConfig {
 
+
+    // MEJORA: Inyectamos nuestro filtro como un bean de Spring.
+    // Spring se encargará de crearlo y de pasarle el UserDetailsService que necesita.
+    private final JwtTokenValidator jwtTokenValidator;
     /**
      * Define la cadena de filtros de seguridad de Spring (SecurityFilterChain).
      * Este método reemplaza el uso de WebSecurityConfigurerAdapter en Spring Security moderno.
@@ -57,7 +66,7 @@ public class appConfig {
                 )
 
                 // 🔄 Filtro de validación de token JWT personalizado
-                .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
+                .addFilterBefore(jwtTokenValidator, UsernamePasswordAuthenticationFilter.class)
                 // → Coloca tu filtro JWT antes del filtro de autenticación básica.
 
                 // 🚫 Deshabilita protección CSRF
