@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,32 +61,39 @@ public class RestaurantServiceImp implements RestaurantService {
      * @throws OperationNotAllowedException si un usuario con rol 'RESTAURANT_OWNER' intenta crear un segundo lanza
      * una excepción de tipo 409.
      */
+
     @Override
-    // EN RestaurantServiceImp.java
     @Transactional
     public RestaurantDto createRestaurant(CreateRestaurantRequest req, User user) {
         log.info("Iniciando creación/verificación de restaurante para el usuario '{}'", user.getEmail());
 
-        // Buscamos si ya existe un restaurante para este propietario.
         Optional<Restaurant> existingRestaurantOpt = Optional.ofNullable(restaurantRepository.findByOwnerId(user.getId()));
 
-        // LÓGICA DE IDEMPOTENCIA
         if (existingRestaurantOpt.isPresent()) {
             log.warn("El restaurante para el usuario '{}' ya existe (ID: {}). Devolviendo el restaurante existente.",
                     user.getEmail(), existingRestaurantOpt.get().getId());
-            // Si ya existe, simplemente devolvemos el DTO del restaurante existente.
-            // La operación es un éxito desde la perspectiva del cliente.
             return mapToRestaurantDto(existingRestaurantOpt.get());
         }
 
-        // --- Si no existe, procedemos con la creación como antes ---
         log.info("No se encontró restaurante existente para '{}'. Procediendo a crear uno nuevo.", user.getEmail());
+
+        // Primero, guardamos la dirección para obtener su ID.
         Address address = addressRepository.save(req.getAddress());
 
+        // --- ¡AQUÍ ESTÁ LA PARTE QUE FALTABA! ---
+        // Creamos el nuevo objeto Restaurant y mapeamos TODOS los campos desde el request.
         Restaurant restaurant = new Restaurant();
-        // ... mapeo de todos los campos ...
+        restaurant.setName(req.getName());
+        restaurant.setDescription(req.getDescription());
+        restaurant.setCuisineType(req.getCuisineType());
+        restaurant.setAddress(address); // Usamos la dirección ya guardada.
+        restaurant.setContactInformation(req.getContactInformation());
+        restaurant.setOpeningHours(req.getOpeningHours());
+        restaurant.setImages(req.getImages());
+        restaurant.setRegistrationDate(LocalDateTime.now());
+        restaurant.setOpen(false);
         restaurant.setOwner(user);
-        // ...
+
 
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
         log.info("Restaurante '{}' (ID: {}) creado exitosamente.", savedRestaurant.getName(), savedRestaurant.getId());
@@ -94,23 +102,6 @@ public class RestaurantServiceImp implements RestaurantService {
     }
 
 
-    private  RestaurantDto mapToRestaurantDto(Restaurant savedRestaurant) {
-
-        RestaurantDto dto = new RestaurantDto();
-        dto.setId(savedRestaurant.getId());
-        dto.setOwner(savedRestaurant.getOwner());
-        dto.setName(savedRestaurant.getName());
-        dto.setDescription(savedRestaurant.getDescription());
-        dto.setCuisineType(savedRestaurant.getCuisineType());
-        dto.setAddress(savedRestaurant.getAddress());
-        dto.setContactInformation(savedRestaurant.getContactInformation());
-        dto.setOpeningHours(savedRestaurant.getOpeningHours());
-        dto.setImages(savedRestaurant.getImages());
-        dto.setRegistrationDate(savedRestaurant.getRegistrationDate());
-        dto.setOpen(savedRestaurant.isOpen());
-        return dto;
-
-    }
 
     /**
      * Actualiza la información de un restaurante existente.
@@ -321,5 +312,21 @@ public class RestaurantServiceImp implements RestaurantService {
         log.warn("¡ACCESO DENEGADO! El usuario '{}' (Rol: {}) intentó acceder al restaurante ID {} sin ser propietario.",
                 user.getEmail(), user.getRole(), restaurantId);
         throw new AccessDeniedException("No tienes permiso para realizar esta acción en este restaurante.");
+    }
+
+    private RestaurantDto mapToRestaurantDto(Restaurant restaurant) {
+        RestaurantDto dto = new RestaurantDto();
+        dto.setId(restaurant.getId());
+        dto.setName(restaurant.getName());
+        dto.setDescription(restaurant.getDescription());
+        dto.setCuisineType(restaurant.getCuisineType());
+        dto.setAddress(restaurant.getAddress());
+        dto.setContactInformation(restaurant.getContactInformation());
+        dto.setOpeningHours(restaurant.getOpeningHours());
+        dto.setImages(restaurant.getImages());
+        dto.setOpen(restaurant.isOpen()); // Asegúrate de que la entidad Restaurant tiene este campo.
+        dto.setRegistrationDate(restaurant.getRegistrationDate());
+        dto.setOwner(restaurant.getOwner());
+        return dto;
     }
 }

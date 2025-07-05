@@ -38,16 +38,10 @@ public class CustomerUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // Buscamos el usuario por email y lo devolvemos directamente.
         // El método .orElseThrow() de Optional nos permite lanzar una excepción de forma concisa si no se encuentra.
-        User user = userRepository.findByEmail(username)
+        return userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + username));
 
-        // ¡EL CAMBIO CLAVE!
-        // Creamos nuestro DTO de seguridad y lo devolvemos.
-        // La entidad 'user' nunca sale de este método transaccional.
-        return new AuthenticatedUser(
-                user.getId(),
-                user.getEmail(),
-                user.getAuthorities() // Esto llama al getAuthorities() de tu entidad User
-        );
+
+
     }
 }

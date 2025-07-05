@@ -58,7 +58,7 @@ public class AdminRestaurantController {
      * Valida la regla de negocio que impide a un 'RESTAURANT_OWNER' crear más de un restaurante.
      *
      * @param req El DTO con los datos para la creación del restaurante.
-     * @param  
+     * @param user El usuario autenticado, inyectado por Spring Security.
      * @return Un {@link ResponseEntity} con el restaurante creado y un estado HTTP 201 (Created).
      */
     @Operation(
@@ -92,11 +92,11 @@ public class AdminRestaurantController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_OWNER')")
     public ResponseEntity<RestaurantDto> createRestaurant(
             @Valid @RequestBody CreateRestaurantRequest req,
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+            @AuthenticationPrincipal User user
             ) {
         log.info("Usuario '{}' solicita la creación de un restaurante con nombre '{}'.",
-                authenticatedUser.getUsername(), req.getName());
-        User owner= userService.findUserById( authenticatedUser.id());
+                user.getEmail(), req.getName());
+        User owner = userService.findUserById( user.getId() );
         RestaurantDto restaurant = restaurantService.createRestaurant(req, owner);
         return new ResponseEntity<>(restaurant, HttpStatus.CREATED);
     }

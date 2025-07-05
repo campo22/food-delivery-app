@@ -65,6 +65,8 @@ public class CreateRestaurantRequest {
          * Lista de URLs o nombres de imágenes (opcional).
          */
         private List<@NotBlank(message = "La imagen no puede estar vacía") String> images;
+
+        private Boolean open;
     }
 
 
