@@ -1,23 +1,27 @@
 package com.diver.dto;
 
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import com.diver.model.Address;
+import com.diver.model.ContactInformation;
+import com.diver.model.User;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@Embeddable
 public class RestaurantDto {
-
-    private  String title;
-
-    @Column(length = 1000)
-    private List<String> images;
-
+    private  Long id;
+    private  User owner;
+    private  String name;
     private  String description;
-
-    private Long id;
+    private  String cuisineType;
+    private  Address address;
+    private  ContactInformation contactInformation;
+    private  String openingHours;
+    private  List<String> images;
+    private  LocalDateTime registrationDate;
+    private  boolean open;
 
 }
+
+

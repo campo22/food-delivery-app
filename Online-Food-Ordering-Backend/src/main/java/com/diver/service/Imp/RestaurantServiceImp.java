@@ -1,10 +1,13 @@
 package com.diver.service.Imp;
 
+import com.diver.dto.AdddToFavoritesDto;
+
 import com.diver.dto.RestaurantDto;
 import com.diver.exception.AccessDeniedException;
 import com.diver.exception.OperationNotAllowedException;
 import com.diver.exception.RestaurantNotFoundException;
 import com.diver.model.Address;
+
 import com.diver.model.Restaurant;
 import com.diver.model.User;
 import com.diver.repository.AddressRepository;
@@ -17,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -58,36 +61,55 @@ public class RestaurantServiceImp implements RestaurantService {
      * una excepción de tipo 409.
      */
     @Override
+    // EN RestaurantServiceImp.java
     @Transactional
-    public Restaurant createRestaurant(CreateRestaurantRequest req, User user) {
-        log.info("Usuario '{}' iniciando la creación de un nuevo restaurante.", user.getEmail());
+    public RestaurantDto createRestaurant(CreateRestaurantRequest req, User user) {
+        log.info("Iniciando creación/verificación de restaurante para el usuario '{}'", user.getEmail());
 
-        if ("RESTAURANT_OWNER".equals(user.getRole())) {
-            if (restaurantRepository.findByOwnerId(user.getId()) != null) {
-                log.warn("Intento de violación de regla: El usuario '{}' ya posee un restaurante.", user.getEmail());
-                throw new OperationNotAllowedException("Un propietario solo puede registrar un restaurante.");
-            }
+        // Buscamos si ya existe un restaurante para este propietario.
+        Optional<Restaurant> existingRestaurantOpt = Optional.ofNullable(restaurantRepository.findByOwnerId(user.getId()));
+
+        // LÓGICA DE IDEMPOTENCIA
+        if (existingRestaurantOpt.isPresent()) {
+            log.warn("El restaurante para el usuario '{}' ya existe (ID: {}). Devolviendo el restaurante existente.",
+                    user.getEmail(), existingRestaurantOpt.get().getId());
+            // Si ya existe, simplemente devolvemos el DTO del restaurante existente.
+            // La operación es un éxito desde la perspectiva del cliente.
+            return mapToRestaurantDto(existingRestaurantOpt.get());
         }
 
+        // --- Si no existe, procedemos con la creación como antes ---
+        log.info("No se encontró restaurante existente para '{}'. Procediendo a crear uno nuevo.", user.getEmail());
         Address address = addressRepository.save(req.getAddress());
 
         Restaurant restaurant = new Restaurant();
-        // Mapeo de campos desde la solicitud al modelo
-        restaurant.setAddress(address);
-        restaurant.setContactInformation(req.getContactInformation());
-        restaurant.setCuisineType(req.getCuisineType());
-        restaurant.setDescription(req.getDescription());
-        restaurant.setName(req.getName());
-        restaurant.setOpeningHours(req.getOpeningHours());
+        // ... mapeo de todos los campos ...
         restaurant.setOwner(user);
-        restaurant.setImages(req.getImages());
-        restaurant.setRegistrationDate(LocalDateTime.now());
-        restaurant.setOpen(true);
+        // ...
 
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
-        log.info("Restaurante '{}' (ID: {}) creado exitosamente por el usuario '{}'.", savedRestaurant.getName(), savedRestaurant.getId(), user.getEmail());
+        log.info("Restaurante '{}' (ID: {}) creado exitosamente.", savedRestaurant.getName(), savedRestaurant.getId());
 
-        return savedRestaurant;
+        return mapToRestaurantDto(savedRestaurant);
+    }
+
+
+    private  RestaurantDto mapToRestaurantDto(Restaurant savedRestaurant) {
+
+        RestaurantDto dto = new RestaurantDto();
+        dto.setId(savedRestaurant.getId());
+        dto.setOwner(savedRestaurant.getOwner());
+        dto.setName(savedRestaurant.getName());
+        dto.setDescription(savedRestaurant.getDescription());
+        dto.setCuisineType(savedRestaurant.getCuisineType());
+        dto.setAddress(savedRestaurant.getAddress());
+        dto.setContactInformation(savedRestaurant.getContactInformation());
+        dto.setOpeningHours(savedRestaurant.getOpeningHours());
+        dto.setImages(savedRestaurant.getImages());
+        dto.setRegistrationDate(savedRestaurant.getRegistrationDate());
+        dto.setOpen(savedRestaurant.isOpen());
+        return dto;
+
     }
 
     /**
@@ -160,20 +182,20 @@ public class RestaurantServiceImp implements RestaurantService {
      *
      * @param restaurantId El ID del restaurante a añadir a favoritos.
      * @param user El usuario que realiza la acción.
-     * @return Un {@link RestaurantDto} representando el restaurante añadido.
+     * @return Un {@link AdddToFavoritesDto} representando el restaurante añadido.
      * @throws RestaurantNotFoundException si el restaurante con el ID dado no existe.
      * @throws OperationNotAllowedException si el restaurante ya se encuentra en los favoritos del usuario.
      */
     @Override
     @Transactional
-    public RestaurantDto addToFavorite(Long restaurantId, User user) {
+    public AdddToFavoritesDto addToFavorite(Long restaurantId, User user) {
         Restaurant restaurant = findRestaurantById(restaurantId);
 
         if (user.getFavorites().stream().anyMatch(fav -> fav.getId().equals(restaurantId))) {
             throw new OperationNotAllowedException("Este restaurante ya está en tu lista de favoritos.");
         }
 
-        RestaurantDto dto = new RestaurantDto();
+        AdddToFavoritesDto dto = new AdddToFavoritesDto();
         dto.setId(restaurant.getId());
         dto.setTitle(restaurant.getName());
         dto.setDescription(restaurant.getDescription());

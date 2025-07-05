@@ -1,9 +1,12 @@
 package com.diver.controller;
 
+import com.diver.dto.AuthenticatedUser;
+import com.diver.dto.RestaurantDto;
 import com.diver.model.Restaurant;
 import com.diver.model.User;
 import com.diver.request.CreateRestaurantRequest;
 import com.diver.service.RestaurantService;
+import com.diver.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,6 +49,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminRestaurantController {
 
     private final RestaurantService restaurantService;
+    private final UserService userService;
 
     /**
      * Crea un nuevo restaurante en el sistema.
@@ -54,7 +58,7 @@ public class AdminRestaurantController {
      * Valida la regla de negocio que impide a un 'RESTAURANT_OWNER' crear más de un restaurante.
      *
      * @param req El DTO con los datos para la creación del restaurante.
-     * @param user El usuario autenticado, inyectado por Spring Security.
+     * @param  
      * @return Un {@link ResponseEntity} con el restaurante creado y un estado HTTP 201 (Created).
      */
     @Operation(
@@ -86,13 +90,14 @@ public class AdminRestaurantController {
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<Restaurant> createRestaurant(
+    public ResponseEntity<RestaurantDto> createRestaurant(
             @Valid @RequestBody CreateRestaurantRequest req,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+            ) {
         log.info("Usuario '{}' solicita la creación de un restaurante con nombre '{}'.",
-                user.getEmail(), req.getName());
-        Restaurant restaurant = restaurantService.createRestaurant(req, user);
+                authenticatedUser.getUsername(), req.getName());
+        User owner= userService.findUserById( authenticatedUser.id());
+        RestaurantDto restaurant = restaurantService.createRestaurant(req, owner);
         return new ResponseEntity<>(restaurant, HttpStatus.CREATED);
     }
 
@@ -245,7 +250,7 @@ public class AdminRestaurantController {
                     description = "El usuario no posee un restaurante",
                     content = @Content)
     })
-    @GetMapping("/my-restaurant") // Cambiado de "/user" a algo más semántico y RESTful
+    @GetMapping("/my-restaurant")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_OWNER')")
     public ResponseEntity<Restaurant> getRestaurantByUserId(
             @AuthenticationPrincipal User user

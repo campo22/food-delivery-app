@@ -1,7 +1,8 @@
 
 package com.diver.model;
 
-import com.diver.dto.RestaurantDto;
+import com.diver.dto.AdddToFavoritesDto;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -91,7 +92,7 @@ public class User implements UserDetails {
      * Colección de restaurantes favoritos del usuario, representados por objetos RestaurantDto.
      */
     @ElementCollection
-    private List<RestaurantDto> favorites = new ArrayList<>();
+    private List<AdddToFavoritesDto> favorites = new ArrayList<>();
 
     /**
      * Lista de direcciones asociadas al usuario.

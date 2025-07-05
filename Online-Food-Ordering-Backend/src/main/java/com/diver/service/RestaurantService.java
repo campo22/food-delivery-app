@@ -1,5 +1,7 @@
 package com.diver.service;
 
+import com.diver.dto.AdddToFavoritesDto;
+
 import com.diver.dto.RestaurantDto;
 import com.diver.model.Restaurant;
 import com.diver.model.User;
@@ -16,7 +18,7 @@ public interface RestaurantService {
          * @param user Usuario que realiza la operación.
          * @return Restaurante creado.
          */
-        Restaurant createRestaurant(CreateRestaurantRequest req, User user);
+        RestaurantDto createRestaurant(CreateRestaurantRequest req, User user);
 
         /**
          * Actualiza un restaurante existente identificado por su ID, validando el usuario.
@@ -74,7 +76,7 @@ public interface RestaurantService {
          * @param user         Usuario que realiza la operación.
          * @return DTO del restaurante actualizado.
          */
-        RestaurantDto addToFavorite(Long restaurantId, User user);
+        AdddToFavoritesDto addToFavorite(Long restaurantId, User user);
 
         /**
          * Actualiza el estado de un restaurante, validando el usuario.

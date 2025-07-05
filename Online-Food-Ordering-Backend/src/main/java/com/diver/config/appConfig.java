@@ -56,13 +56,10 @@ public class appConfig {
                 )
 
                 // 🔐 Autorización de peticiones HTTP
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/admin/**")
-                        .hasAnyRole("RESTAURANTE_OWNER", "ADMIN") // Solo estos roles pueden acceder a rutas admin
-                        .requestMatchers("api/**")
-                        .authenticated() // Requiere autenticación JWT para otras rutas bajo /api/
-                        .anyRequest()// el enyRequest() es para cualquier otra ruta que no sea /api/ o /api/admin
-                        .permitAll() // Todo lo demás (ej. rutas públicas) es accesible sin autenticación
+                // EN SecurityConfig.java
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 // 🔄 Filtro de validación de token JWT personalizado

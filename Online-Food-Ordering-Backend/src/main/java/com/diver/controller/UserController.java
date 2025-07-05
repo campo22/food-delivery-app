@@ -1,28 +1,28 @@
 package com.diver.controller;
 
+import com.diver.dto.UserProfileDto;
 import com.diver.model.User;
-import com.diver.service.Imp.UserServiceImp;
-import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.diver.service.UserService; // Importa la interfaz, no la implementación
+// ... otras importaciones ...
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserServiceImp userServiceImp;
+    private final UserService userService; // Inyecta la interfaz
 
-    @Operation(
-            summary = "Obtener informacion personal de un usuario",
-            description = "Se obtiene la informacion personal de un usuario registrado y logueado."
-    )
     @GetMapping("/profile")
-    public ResponseEntity<User> findUserByJwtToken(@RequestHeader("Authorization") String jwt) throws Exception {
-        return ResponseEntity.ok(userServiceImp.findUserByJwt(jwt));
+    public ResponseEntity<UserProfileDto> getUserProfile(@AuthenticationPrincipal User user) {
+        // Llama al nuevo método del servicio para obtener el DTO.
+        UserProfileDto userProfile = userService.getUserProfileByEmail(user.getEmail());
+        return ResponseEntity.ok(userProfile);
     }
 }
