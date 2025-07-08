@@ -6,6 +6,7 @@ import com.diver.dto.RestaurantDto;
 import com.diver.exception.AccessDeniedException;
 import com.diver.exception.OperationNotAllowedException;
 import com.diver.exception.RestaurantNotFoundException;
+import com.diver.exception.UserNotFoundException;
 import com.diver.model.Address;
 
 import com.diver.model.Restaurant;
@@ -172,34 +173,55 @@ public class RestaurantServiceImp implements RestaurantService {
      * Agrega un restaurante a la lista de favoritos de un usuario.
      *
      * @param restaurantId El ID del restaurante a añadir a favoritos.
-     * @param user El usuario que realiza la acción.
+     * @param detachedUser El usuario que realiza la acción.
      * @return Un {@link AdddToFavoritesDto} representando el restaurante añadido.
      * @throws RestaurantNotFoundException si el restaurante con el ID dado no existe.
      * @throws OperationNotAllowedException si el restaurante ya se encuentra en los favoritos del usuario.
      */
+    // EN RestaurantServiceImp.java
+
     @Override
     @Transactional
-    public AdddToFavoritesDto addToFavorite(Long restaurantId, User user) {
+    public List<AdddToFavoritesDto>  addToFavorite(Long restaurantId, User detachedUser) {
+        // 1. Buscamos el restaurante que se va a añadir.
         Restaurant restaurant = findRestaurantById(restaurantId);
 
-        if (user.getFavorites().stream().anyMatch(fav -> fav.getId().equals(restaurantId))) {
-            throw new OperationNotAllowedException("Este restaurante ya está en tu lista de favoritos.");
+        // 2. ¡PASO CLAVE! Cargamos una instancia "fresca" y gestionada del usuario
+        // usando el ID del usuario desconectado que nos llegó del controlador.
+        User managedUser = userRepository.findById(detachedUser.getId())
+                .orElseThrow(() -> new UserNotFoundException("El usuario autenticado no fue encontrado en la base de datos."));
+
+        // 3. Validamos si el restaurante ya estaba en la lista de favoritos.
+        Optional<AdddToFavoritesDto> existingFavorite = managedUser.getFavorites().stream()
+                .filter(fav ->fav.getId().equals(restaurantId)).findFirst();
+        if (existingFavorite.isPresent()){
+            AdddToFavoritesDto favoriteToRemove = existingFavorite.get();
+            managedUser.getFavorites().remove(favoriteToRemove);
+            userRepository.save(managedUser);
+
+            log.info("Usuario '{}' eliminó el restaurante '{}' de sus favoritos.",
+                    managedUser.getEmail(), restaurant.getName());
+        }else {
+
+            // 4. Creamos el DTO para añadirlo a la lista.
+            AdddToFavoritesDto dto = new AdddToFavoritesDto();
+            dto.setId(restaurant.getId());
+            dto.setTitle(restaurant.getName());
+            dto.setDescription(restaurant.getDescription());
+            dto.setImages(restaurant.getImages());
+
+            // 5. Modificamos la colección del usuario GESTIONADO.
+            managedUser.getFavorites().add(dto);
         }
 
-        AdddToFavoritesDto dto = new AdddToFavoritesDto();
-        dto.setId(restaurant.getId());
-        dto.setTitle(restaurant.getName());
-        dto.setDescription(restaurant.getDescription());
-        dto.setImages(restaurant.getImages());
+        // 6. Guardamos el usuario gestionado. JPA/Hibernate se encargará de actualizar
+        // la tabla de favoritos.
+        userRepository.save(managedUser);
 
-        user.getFavorites().add(dto);
-        userRepository.save(user);
+        log.info("Usuario '{}' agregó el restaurante '{}' a sus favoritos.", managedUser.getEmail(), restaurant.getName());
 
-        log.info("Usuario '{}' agregó el restaurante '{}' a sus favoritos.", user.getEmail(), restaurant.getName());
-
-        return dto;
+        return managedUser.getFavorites();
     }
-
     /**
      * Alterna el estado de apertura de un restaurante (abierto/cerrado).
      *
@@ -211,7 +233,7 @@ public class RestaurantServiceImp implements RestaurantService {
      */
     @Override
     @Transactional
-    public Restaurant updateRestaurantStatus(Long id, User user) {
+    public RestaurantDto updateRestaurantStatus(Long id, User user) {
         Restaurant restaurant = validateOwnershipAndGetRestaurant(id, user);
 
         restaurant.setOpen(!restaurant.isOpen());
@@ -219,15 +241,17 @@ public class RestaurantServiceImp implements RestaurantService {
         log.info("Usuario '{}' cambió el estado del restaurante '{}' (ID: {}) a '{}'.",
                 user.getEmail(), restaurant.getName(), id, restaurant.isOpen() ? "ABIERTO" : "CERRADO");
 
-        return restaurantRepository.save(restaurant);
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+
+        return mapToRestaurantDto( savedRestaurant );
     }
 
     // --- MÉTODOS DE LECTURA ---
 
     /**
      * Obtiene una lista de todos los restaurantes registrados en el sistema.
-     * @return Una lista de entidades {@link Restaurant}.
-     */
+      * @return Una lista de entidades {@link Restaurant}.
+      */
     @Override
     public List<Restaurant> getAllRestaurants() {
         log.debug("Recuperando todos los restaurantes.");
@@ -295,13 +319,16 @@ public class RestaurantServiceImp implements RestaurantService {
     private Restaurant validateOwnershipAndGetRestaurant(Long restaurantId, User user) {
         Restaurant restaurant = findRestaurantById(restaurantId);
 
-        if ("ADMIN".equals(user.getRole())) {
+        String userRole = user.getRole().name();
+
+        if ("ROLE_ADMIN".equals(userRole)) {
+
             log.debug("Acceso de ADMIN concedido al usuario '{}' para el restaurante ID {}.",
                     user.getEmail(), restaurantId);
             return restaurant;
         }
 
-        if ("RESTAURANT_OWNER".equals(user.getRole())) {
+        if ("ROLE_RESTAURANT_OWNER".equals(userRole)) {
             if (restaurant.getOwner().getId().equals(user.getId())) {
                 log.debug("Acceso de propietario concedido al usuario '{}' para el restaurante ID {}.",
                         user.getEmail(), restaurantId);

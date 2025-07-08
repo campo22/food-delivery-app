@@ -76,7 +76,7 @@ public interface RestaurantService {
          * @param user         Usuario que realiza la operación.
          * @return DTO del restaurante actualizado.
          */
-        AdddToFavoritesDto addToFavorite(Long restaurantId, User user);
+        List<AdddToFavoritesDto> addToFavorite(Long restaurantId, User user);
 
         /**
          * Actualiza el estado de un restaurante, validando el usuario.
@@ -85,5 +85,5 @@ public interface RestaurantService {
          * @param user Usuario que realiza la operación.
          * @return Restaurante con el estado actualizado.
          */
-        Restaurant updateRestaurantStatus(Long id, User user);
+        RestaurantDto updateRestaurantStatus(Long id, User user);
 }

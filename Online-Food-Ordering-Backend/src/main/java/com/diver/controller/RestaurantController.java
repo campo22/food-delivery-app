@@ -169,13 +169,13 @@ public class RestaurantController {
                     content = @Content)
     })
     @PutMapping("/{id}/add-favorite")
-    public ResponseEntity<AdddToFavoritesDto> addToFavorite(
+    public ResponseEntity<List<AdddToFavoritesDto>> addToFavorite(
             @AuthenticationPrincipal User user,
             @Parameter(description = "ID del restaurante a marcar como favorito", required = true, example = "1")
             @PathVariable Long id
     ) {
         log.info("Usuario '{}' añadiendo restaurante con ID {} a favoritos.", user.getEmail(), id);
-        AdddToFavoritesDto restaurantDto = restaurantService.addToFavorite(id, user);
-        return ResponseEntity.ok(restaurantDto);
+        List<AdddToFavoritesDto> updateFavorites = restaurantService.addToFavorite(id, user);
+        return ResponseEntity.ok(updateFavorites);
     }
 }

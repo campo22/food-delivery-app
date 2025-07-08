@@ -211,14 +211,14 @@ public class AdminRestaurantController {
     })
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<Restaurant> updateRestaurantStatus(
+    public ResponseEntity<RestaurantDto> updateRestaurantStatus(
             @Parameter(description = "ID del restaurante para cambiar su estado", required = true, example = "1")
 
             @PathVariable Long id,
             @AuthenticationPrincipal User user
     ) {
         log.info("Usuario '{}' solicita cambiar el estado del restaurante con ID {}.", user.getEmail(), id);
-        Restaurant restaurant = restaurantService.updateRestaurantStatus(id, user);
+        RestaurantDto restaurant = restaurantService.updateRestaurantStatus(id, user);
         return ResponseEntity.ok(restaurant);
     }
 
