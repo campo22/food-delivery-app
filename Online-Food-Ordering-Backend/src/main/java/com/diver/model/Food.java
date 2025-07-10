@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "food")
-public class Food {
+public class    Food {
     /**
      * ID único de la comida (clave primaria en la base de datos)
      */
