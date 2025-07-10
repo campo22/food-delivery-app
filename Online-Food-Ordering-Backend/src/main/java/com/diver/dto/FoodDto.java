@@ -15,7 +15,7 @@ import java.util.List;
  * para evitar problemas de serialización y sobreexposición de datos.
  */
 @Data
-public class FoodDto {
+public class    FoodDto {
 
     private Long id;
     private String name;

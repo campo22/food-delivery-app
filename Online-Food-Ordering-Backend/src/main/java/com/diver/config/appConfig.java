@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -58,8 +59,32 @@ public class appConfig {
                 // 🔐 Autorización de peticiones HTTP
                 // EN SecurityConfig.java
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
+
+                        // --- REGLAS PÚBLICAS (Las más específicas primero) ---
+                        // Permite el acceso sin autenticación a todos los endpoints de autenticación.
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // Permite el acceso sin autenticación a la documentación de la API.
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        // Permite el acceso PÚBLICO a los endpoints de consulta de comida.
+                        .requestMatchers(HttpMethod.GET, "/api/food/**").permitAll()
+
+                        // Permite el acceso PÚBLICO a los endpoints de consulta de restaurantes.
+                        .requestMatchers(HttpMethod.GET, "/api/restaurant", "/api/restaurant/search", "/api/restaurant/restaurant/{restaurantId}").permitAll()
+
+                        // --- REGLAS DE ADMINISTRACIÓN ---
+                        // Protege todas las rutas de administración, la autorización final se delega a @PreAuthorize.
+                        .requestMatchers("/api/admin/**").hasAnyRole("RESTAURANT_OWNER", "ADMIN")
+
+                        // --- REGLA GENERAL PARA EL RESTO DE LA API ---
+                        // Cualquier otra petición bajo /api/ (que no haya coincidido antes) requiere autenticación.
+                        // Esto protege endpoints como /api/restaurant/{id}/toggle-favorite o /api/users/profile
+                        .requestMatchers("/api/**").authenticated()
+
+                        // --- REGLA POR DEFECTO ---
+                        // Si alguna ruta no coincidió con nada anterior (ej: la raíz "/"), se permite.
+                        .anyRequest().permitAll()
                 )
 
                 // 🔄 Filtro de validación de token JWT personalizado
