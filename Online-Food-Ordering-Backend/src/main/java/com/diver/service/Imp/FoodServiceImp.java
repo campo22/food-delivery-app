@@ -58,7 +58,7 @@ public class FoodServiceImp implements FoodService {
                 "El restaurante con ID " + restaurantId + " no fue encontrado."));
 
         // Validar si el usuario es el propietario del restaurante
-        if (!restaurant.getOwner().equals(restaurantId)){
+        if (!restaurant.getOwner().getId().equals(user.getId()))  {
             log.warn("El usuario '{}' no es el propietario del restaurante con ID '{}'.",
                     user.getEmail(),
                     restaurantId);
@@ -133,84 +133,53 @@ public class FoodServiceImp implements FoodService {
      */
     @Override
     public List<FoodDto> getRestaurantFoods(Long restaurantId,
-                                            boolean isVegetarian,
-                                            boolean isNonVeg,
-                                            boolean isSeasonal,
+                                            Boolean isVegetarian,
+                                            Boolean isNonVeg,
+                                            Boolean isSeasonal,
                                             String foodCategory) {
 
-        //paso 1: buscar el restaurante por id en la base de datos
+        // buscar el restaurante por id en la base de datos
         List<Food> foods= foodRepository.findByRestaurantId(restaurantId);
+
+        log.info("El repositorio encontró {} platos para el restaurante ID {}.", foods.size(), restaurantId);
 
         log.debug("Obteniendo platos para el restaurante ID {}. Filtros: " +
                         "isVeg={}, isNonVeg={}, isSeasonal={}, category='{}'",
                 restaurantId, isVegetarian, isNonVeg, isSeasonal, foodCategory);
 
 
-        //paso 2: aplicar los filtros a la lista de platos
+        var foodStream = foods.stream();
 
-        // Filtrar por platos vegetarianos
-        if (isVegetarian) {
-            foods=filterVegetarianFoods(foods,true);
+
+        // Filtro vegetariano/no vegetariano. Son mutuamente excluyentes.
+        if (isVegetarian != null) {
+            log.debug("Aplicando filtro vegetariano: {}", isVegetarian);
+            foodStream = foodStream.filter(food -> food.isVegetarian() == isVegetarian);
+        } else if (isNonVeg != null && isNonVeg) {
+            log.debug("Aplicando filtro no vegetariano.");
+            foodStream = foodStream.filter(food -> !food.isVegetarian());
         }
-        // Filtrar por platos no vegetarianos
-        if(isNonVeg){
-            foods=filterVegetarianFoods(foods,false);
+
+        // Filtro de temporada.
+        if (isSeasonal != null) {
+            log.debug("Aplicando filtro de temporada: {}", isSeasonal);
+            foodStream = foodStream.filter(food -> food.isSeasonal() == isSeasonal);
         }
-        // Filtrar por platos de temporada
-        if(isSeasonal){
-            foods=filterSeasonalFoods(foods,true);
-        }
-        // Filtrar por categoría
+
+        // Filtro de categoría.
         if (foodCategory != null && !foodCategory.isEmpty()) {
-            foods=filterCategoryFoods(foods,foodCategory);
-
+            log.debug("Aplicando filtro de categoría: {}", foodCategory);
+            foodStream = foodStream.filter(food -> food.getCategory() != null
+                    && food.getCategory().getName().equalsIgnoreCase(foodCategory));
         }
 
-        return mapToFoodDtoList(foods);
-    }
-    // --- MÉTODOS PRIVADOS DE FILTRADO PARA MANTENER EL CÓDIGO LIMPIO ---
-    /**
-     * Filtra una lista de alimentos por el nombre de su categoría.
-     *
-     * @param foods La lista de alimentos a filtrar.
-     * @param foodCategory El nombre de la categoría por la cual filtrar.
-     * @return Una nueva lista de alimentos que pertenecen a la categoría especificada.
-     */
-    private List<Food> filterCategoryFoods(List<Food> foods, String foodCategory) {
-        return  foods.stream().filter(food -> {
-            if (food.getCategory() != null) {
-                return food.getCategory().getName().equals(foodCategory);
-            }
-            return false;
-        }).collect(Collectors.toList()); // Recolecta los alimentos filtrados en una nueva lista.
+        // 4. Recolectamos los resultados del stream filtrado.
+        List<Food> filteredFoods = foodStream.collect(Collectors.toList());
+        log.info("Después de aplicar filtros, quedaron {} platos.", filteredFoods.size());
 
+        return mapToFoodDtoList(filteredFoods);
     }
 
-    /**
-     * Filtra una lista de alimentos basándose en si son de temporada o no.
-     *
-     * @param foods La lista de alimentos a filtrar.
-     * @param isSeasonal Un valor booleano que indica si se deben incluir alimentos de temporada (true) o no (false).
-     * @return Una nueva lista de alimentos que coinciden con el criterio de estacionalidad.
-     */
-    private List<Food> filterSeasonalFoods(List<Food> foods, boolean isSeasonal) {
-        return foods.stream().filter( food ->
-                food.isSeasonal()== isSeasonal)
-                .collect(Collectors.toList()); // Recolecta los alimentos filtrados en una nueva lista.
-    }
-
-    /**
-     * Filtra una lista de alimentos basándose en si son vegetarianos o no.
-     *
-     * @param foods La lista de alimentos a filtrar.
-     * @param isVegetarian Un valor booleano que indica si se deben incluir alimentos vegetarianos (true) o no (false).
-     * @return Una nueva lista de alimentos que coinciden con el criterio vegetariano.
-     */
-    private List<Food> filterVegetarianFoods(List<Food> foods, boolean isVegetarian) {
-       return foods.stream().filter( food ->
-               food.isVegetarian()== isVegetarian)
-               .collect(Collectors.toList()); // Recolecta los alimentos filtrados en una nueva lista.
-    }
 
     /**
      * Busca platos en toda la aplicación por una palabra clave.
@@ -336,7 +305,7 @@ public class FoodServiceImp implements FoodService {
         Restaurant restaurant= food.getRestaurant();
 
         // Validar si el usuario es el propietario del restaurante
-        if(!restaurant.getOwner().equals(user.getId()) && !user.getRole().name().equals("ROLE_ADMIN")){
+        if(!restaurant.getOwner().getId().equals(user.getId()) && !user.getRole().name().equals("ROLE_ADMIN")){
             log.warn("ACESSO DENEGADO: El usuario '{}' no es el propietario del restaurante con ID '{}'.",
                     user.getEmail(),
                     restaurant.getId());

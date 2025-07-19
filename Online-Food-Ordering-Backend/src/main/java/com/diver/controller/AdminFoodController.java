@@ -119,7 +119,7 @@ public class AdminFoodController {
             @ApiResponse(responseCode = "403", description = "Acceso denegado (no es propietario)"),
             @ApiResponse(responseCode = "404", description = "Plato no encontrado")
     })
-    @PutMapping("/{foodId}/status")
+    @PutMapping("/{foodId}/availability")
     @PreAuthorize("hasRole('RESTAURANT_OWNER') or hasRole('ADMIN')")
     public ResponseEntity<FoodDto> updateFoodAvailabilityStatus(
             @Parameter(description = "ID del plato a actualizar", required = true)

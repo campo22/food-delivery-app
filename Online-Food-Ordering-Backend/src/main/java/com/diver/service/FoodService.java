@@ -50,9 +50,9 @@ public interface FoodService {
      */
     List<FoodDto> getRestaurantFoods(
             Long restaurantId,
-            boolean isVegetarian,
-            boolean isNonVeg,
-            boolean isSeasonal,
+            Boolean isVegetarian,
+            Boolean isNonVeg,
+            Boolean isSeasonal,
             String foodCategory
     );
 

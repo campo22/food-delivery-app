@@ -79,13 +79,13 @@ public class FoodController {
             @PathVariable Long restaurantId,
 
             @Parameter(description = "Filtrar por platos vegetarianos")
-            @RequestParam(required = false) boolean vegetarian,
+            @RequestParam(required = false) Boolean vegetarian,
 
             @Parameter(description = "Filtrar por platos de temporada")
-            @RequestParam(required = false) boolean seasonal,
+            @RequestParam(required = false) Boolean seasonal,
 
             @Parameter(description = "Filtrar por platos no vegetarianos")
-            @RequestParam(required = false) boolean nonveg,
+            @RequestParam(required = false) Boolean nonveg,
 
             @Parameter(description = "Filtrar por nombre de categoría", example = "Pizzas")
             @RequestParam(required = false) String food_category

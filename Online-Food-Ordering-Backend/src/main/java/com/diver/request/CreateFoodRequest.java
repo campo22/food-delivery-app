@@ -21,7 +21,8 @@ public class CreateFoodRequest {
 
     @NonNull
     private Long categoryId;
-    @NonNull
+
+
     private Long restaurantId;
     private List<IngredientItem> ingredients;
 
