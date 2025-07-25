@@ -1,4 +1,4 @@
-package com.diver.service;
+package com.diver.service.Imp;
 
 import com.diver.config.JwtProvider;
 import com.diver.exception.EmailAlreadyExistsException;
@@ -19,15 +19,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
-
 /**
  * Servicio que encapsula toda la lógica de negocio para la autenticación,
  * incluyendo el registro de nuevos usuarios y el inicio de sesión.
  */
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class AuthServiceImp {
 
     private final UserRepository userRepository;
     private final CartRepository cartRepository;

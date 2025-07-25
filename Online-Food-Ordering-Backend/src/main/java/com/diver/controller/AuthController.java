@@ -3,7 +3,7 @@ package com.diver.controller;
 import com.diver.model.User;
 import com.diver.request.LoginRequest;
 import com.diver.response.AuthResponse;
-import com.diver.service.AuthService;
+import com.diver.service.Imp.AuthServiceImp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * Este controlador expone endpoints públicos para que los usuarios puedan
  * crear una cuenta (signup) e iniciar sesión (signin). Delega toda la lógica
- * de negocio al {@link AuthService}.
+ * de negocio al {@link AuthServiceImp}.
  */
 @RestController
 @RequestMapping("/auth")
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Authentication", description = "Endpoints para registro e inicio de sesión.")
 public class AuthController {
 
- private final AuthService authService;
+ private final AuthServiceImp authService;
 
  /**
   * Maneja la solicitud de registro de un nuevo usuario.

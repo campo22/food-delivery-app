@@ -41,4 +41,13 @@ public interface CategoryService {
      *
      */
     CategoryDto findCategoryById(Long id);
+
+    /**
+     * Encuentra todas las categorías asociadas a un usuario.
+     *
+     * @param userId El ID del usuario.
+     * @return Una lista de DTOs de las categorías encontradas.
+     */
+    List<CategoryDto> findCategoriesByUserId(Long userId);
+
 }

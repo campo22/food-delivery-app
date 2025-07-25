@@ -104,6 +104,22 @@ public class CategoryServiceImp implements CategoryService {
         return mapToCategoryDto(category);
     }
 
+    /**
+     * Encuentra todas las categorías asociadas a un usuario.
+     *
+     * @param userId El ID del usuario.
+     * @return Una lista de DTOs de las categorías encontradas.
+     */
+    @Override
+    public List<CategoryDto> findCategoriesByUserId(Long userId) {
+
+        Restaurant restaurant = restaurantRepository.findByOwnerId(userId);
+        if (restaurant == null) {
+            throw new RestaurantNotFoundException("No se encontró restaurante para el usuario con ID: " + userId);
+        }
+        return findCategoriesByRestaurantId(restaurant.getId());
+    }
+
     // --- MÉTODO PRIVADO DE MAPEADO ---
 
     /**

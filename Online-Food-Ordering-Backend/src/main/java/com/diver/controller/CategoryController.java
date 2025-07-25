@@ -59,7 +59,7 @@ public class CategoryController {
     }
 
     // Este endpoint es para que un OWNER obtenga las categorías de SU restaurante.
-    @GetMapping("/my-restaurant") // Ruta clara y específica
+    @GetMapping("/admin/my-restaurant/categories") // Ruta clara y específica
     @Operation(
             summary = "Obtener categorías de mi restaurante",
             description = "Permite a un PROPIETARIO DE RESTAURANTE " +
@@ -82,13 +82,13 @@ public class CategoryController {
         log.debug("Propietario '{}' solicita las categorías de su restaurante.", user.getEmail());
 
         // Llamamos al método del servicio que entiende cómo buscar por userId
-        List<CategoryDto> categories = categoryService.findCategoriesByRestaurantId(user.getId());
+        List<CategoryDto> categories = categoryService.findCategoriesByUserId(user.getId());
 
         return ResponseEntity.ok(categories);
     }
 
     // Y si un ADMIN necesita ver las categorías de CUALQUIER restaurante, tendría su propio endpoint:
-    @GetMapping("/restaurant/{restaurantId}")
+    @GetMapping("/admin/{Id}/category")
     @Operation(
             summary = "Obtener categorías por ID de restaurante (Admin)",
             description = "Permite a un ADMINISTRADOR obtener todas las " +
@@ -104,10 +104,10 @@ public class CategoryController {
                             content = @Content)
             }
     )
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<CategoryDto>> getCategoriesByRestaurantForAdmin(@PathVariable Long restaurantId) {
-        log.debug("Admin solicita las categorías del restaurante ID: {}", restaurantId);
-        List<CategoryDto> categories = categoryService.findCategoriesByRestaurantId(restaurantId);
+    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long Id) {
+        log.debug("Admin solicita las categorías del restaurante ID: {}", Id);
+        CategoryDto categories = categoryService.findCategoryById(Id);
         return ResponseEntity.ok(categories);
     }
 }
