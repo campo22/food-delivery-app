@@ -14,11 +14,11 @@ public interface CartService {
     /**
      * Añade un ítem al carrito del usuario o incrementa su cantidad si ya existe.
      *
-     * @param request El DTO con la información del plato a añadir.
+     * @param req El DTO con la información del plato a añadir.
      * @param user    El usuario autenticado.
      * @return El DTO del carrito completo y actualizado.
      */
-    CartDto addItemToCart(AddCartItemRequest request, User user);
+    CartDto addItemToCart(AddCartItemRequest req, User user);
 
     /**
      * Actualiza la cantidad de un ítem específico en el carrito.
