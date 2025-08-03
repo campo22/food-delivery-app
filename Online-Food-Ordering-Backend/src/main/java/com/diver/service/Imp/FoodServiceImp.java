@@ -2,12 +2,15 @@ package com.diver.service.Imp;
 
 
 import com.diver.dto.FoodDto;
+import com.diver.dto.IngredientCategoryDto;
+import com.diver.dto.IngredientItemDto;
 import com.diver.exception.AccessDeniedException;
 import com.diver.exception.FoodNotFoundException;
 import com.diver.exception.RestaurantNotFoundException;
 import com.diver.model.*;
 import com.diver.repository.CategoryRepository;
 import com.diver.repository.FoodRepository;
+import com.diver.repository.IngredientItemRepository;
 import com.diver.repository.RestaurantRepository;
 import com.diver.request.CreateFoodRequest;
 import com.diver.service.FoodService;
@@ -29,6 +32,7 @@ public class FoodServiceImp implements FoodService {
     private final FoodRepository foodRepository;
     private final RestaurantRepository restaurantRepository;
     private final CategoryRepository categoryRepository;
+    private final IngredientItemRepository ingredientItemRepository;
 
 
     /**
@@ -75,13 +79,16 @@ public class FoodServiceImp implements FoodService {
         newFood.setDescription(req.getDescription());
         newFood.setPrice(req.getPrice());
         newFood.setCategory(category);
-        newFood.setImages(req.getImage());
+        newFood.setImages(req.getImages());
         newFood.setAvailable(req.isAvailable());
         newFood.setRestaurant(restaurant);
         newFood.setVegetarian(req.isVegetarian());
         newFood.setSeasonal(req.isSeasonal());
         newFood.setCreationDate(new Date());
-
+        if (req.getIngredientsIds() != null && !req.getIngredientsIds().isEmpty()) {
+            List<IngredientItem> ingredients = ingredientItemRepository.findAllById(req.getIngredientsIds());
+            newFood.setIngredients(ingredients);
+        }
         // Guardar el plato de comida en la base de datos
         Food savedFood = foodRepository.save(newFood);
         log.info("Plato de comida creado con ID: {}",
@@ -258,6 +265,11 @@ public class FoodServiceImp implements FoodService {
         foodDto.setVegetarian(food.isVegetarian());
         foodDto.setSeasonal(food.isSeasonal());
         foodDto.setCreationDate(food.getCreationDate());
+        if(food.getIngredients() != null){
+            foodDto.setIngredients(food.getIngredients().stream()
+                    .map(this::mapToItemDto)
+                    .collect(Collectors.toList()));
+        }
 
         if (food.getCategory()!= null){
             FoodDto.CategoryDto categoryDto= new FoodDto.CategoryDto();
@@ -278,10 +290,31 @@ public class FoodServiceImp implements FoodService {
         return foods.stream().map(this::mapToFoodDto).collect(Collectors.toList());
     }
 
+    private IngredientItemDto mapToItemDto(IngredientItem item) {
+        if (item == null) return null;
 
+        IngredientItemDto dto = new IngredientItemDto();
+        dto.setId(item.getId());
+        dto.setName(item.getName());
+        dto.setInStock(item.isInStock());
+        // Aquí mapeamos la entidad Category a un CategoryDto
+        dto.setCategory(mapToCategoryDto(item.getCategory()));
+        return dto;
+    }
 
+    // Este es tu mapeador de categorías. Es perfecto porque NO contiene la lista de ingredientes.
+    private IngredientCategoryDto mapToCategoryDto(IngredientCategory category) {
+        if (category == null) return null;
 
-
+        IngredientCategoryDto dto = new IngredientCategoryDto();
+        dto.setId(category.getId());
+        dto.setName(category.getName());
+        if (category.getRestaurant() != null) {
+            dto.setRestaurantId(category.getRestaurant().getId());
+        }
+        return dto;
+    }
+    
 
     // --- METODO PRIVADO DE UTILIDAD PARA VALIDACIÓN ---
     /**
@@ -315,5 +348,6 @@ public class FoodServiceImp implements FoodService {
 
         return food;
     }
+
 
 }
