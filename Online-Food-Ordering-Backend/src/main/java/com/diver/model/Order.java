@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -31,7 +32,7 @@ import java.util.List;
  */
 @Data
 @Entity
-@Table(name = "`order`")  // 使用反引号转义MySQL保留关键字
+@Table(name = "`order`")
 @AllArgsConstructor
 @NoArgsConstructor
 public class Order {
@@ -75,7 +76,7 @@ public class Order {
      * Fecha y hora de creación de la orden.
      * Registra el momento exacto en que se realizó el pedido.
      */
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
     /**
      * Dirección de entrega asociada a la orden.
@@ -90,7 +91,7 @@ public class Order {
      * Relación uno a muchos: una orden puede tener muchos productos.
      * Contiene el detalle de cada producto solicitado.
      */
-    @OneToMany
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
 
     // **

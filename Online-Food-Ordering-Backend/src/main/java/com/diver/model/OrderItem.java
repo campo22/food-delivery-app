@@ -1,5 +1,6 @@
 package com.diver.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,7 +13,7 @@ import java.util.List;
 public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", nullable = false)
+    @Column( nullable = false)
     private Long id;
 
     @ManyToOne
@@ -24,5 +25,10 @@ public class OrderItem {
 
     @ElementCollection
     private List<String> ingredients; // lista de ingredientes
+
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(nullable = false )
+    private Order order;
 
 }

@@ -42,7 +42,7 @@ public class    FoodDto {
      * Lista de ingredientes del plato. Se asume que IngredientItem es un DTO o
      * una entidad simple y segura para serializar.
      */
-    private List<IngredientItem> ingredients;
+    private List<IngredientItemDto> ingredients;
 
     private Date creationDate;
 
@@ -66,4 +66,5 @@ public class    FoodDto {
         private Long id;
         private String name;
     }
+
 }

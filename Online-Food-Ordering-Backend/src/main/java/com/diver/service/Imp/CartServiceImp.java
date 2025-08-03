@@ -59,6 +59,8 @@ class CartServiceImp implements CartService {
             int oldQuantity = existingItem.getQuantity();
             existingItem.setQuantity(oldQuantity + req.getQuantity());
             existingItem.setTotalPrice(existingItem.getQuantity() * food.getPrice());
+            existingItem.setIngredients(req.getIngredients());
+
             log.debug("Ítem existente encontrado. Actualizando cantidad de {} a {}.", oldQuantity, existingItem.getQuantity());
         } else {
             CartItem newItem = new CartItem();
@@ -66,6 +68,7 @@ class CartServiceImp implements CartService {
             newItem.setCart(cart);
             newItem.setQuantity(req.getQuantity());
             newItem.setTotalPrice((long) req.getQuantity() * food.getPrice());
+            newItem.setIngredients(req.getIngredients());
             cart.getCartItems().add(newItem);
             log.debug("Añadiendo nuevo ítem al carrito para el plato '{}'.", food.getName());
         }

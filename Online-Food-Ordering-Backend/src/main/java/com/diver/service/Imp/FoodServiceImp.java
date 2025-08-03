@@ -1,13 +1,11 @@
 package com.diver.service.Imp;
 
+
 import com.diver.dto.FoodDto;
 import com.diver.exception.AccessDeniedException;
 import com.diver.exception.FoodNotFoundException;
 import com.diver.exception.RestaurantNotFoundException;
-import com.diver.model.Category;
-import com.diver.model.Food;
-import com.diver.model.Restaurant;
-import com.diver.model.User;
+import com.diver.model.*;
 import com.diver.repository.CategoryRepository;
 import com.diver.repository.FoodRepository;
 import com.diver.repository.RestaurantRepository;
@@ -259,7 +257,6 @@ public class FoodServiceImp implements FoodService {
         foodDto.setAvailable(food.isAvailable());
         foodDto.setVegetarian(food.isVegetarian());
         foodDto.setSeasonal(food.isSeasonal());
-        foodDto.setIngredients(food.getIngredients());
         foodDto.setCreationDate(food.getCreationDate());
 
         if (food.getCategory()!= null){
@@ -280,6 +277,10 @@ public class FoodServiceImp implements FoodService {
     private List<FoodDto> mapToFoodDtoList(List<Food> foods) {
         return foods.stream().map(this::mapToFoodDto).collect(Collectors.toList());
     }
+
+
+
+
 
 
     // --- METODO PRIVADO DE UTILIDAD PARA VALIDACIÓN ---
