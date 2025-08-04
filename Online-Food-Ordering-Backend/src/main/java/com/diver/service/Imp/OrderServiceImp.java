@@ -4,6 +4,7 @@ import com.diver.dto.*;
 import com.diver.exception.AccessDeniedException;
 import com.diver.exception.OperationNotAllowedException;
 import com.diver.exception.ResourceNotFoundException;
+import com.diver.exception.UserNotFoundException;
 import com.diver.model.*;
 import com.diver.repository.*;
 import com.diver.request.OrderRequest;
@@ -40,65 +41,89 @@ public class OrderServiceImp implements OrderService {
      * y limpiar el carrito del usuario tras crear la orden.
      *
      * @param req  El DTO de la petición, que contiene el ID del restaurante y la dirección de entrega.
-     * @param user El usuario (cliente) que realiza la orden.
+     * @param detachedUser El usuario (cliente) que realiza la orden.
      * @return El DTO de la orden recién creada.
      */
     // Para la creación de órdenes - necesita transacción ya que modifica múltiples entidades
-    @Transactional
     @Override
-    public OrderDto createOrder(OrderRequest req, User user) {
-        log.info("Iniciando la creación de una nueva orden para el usuario: {}", user.getEmail());
+    @Transactional
+    public OrderDto createOrder(OrderRequest req, User detachedUser) { // Parámetro renombrado para mayor claridad
+        log.info("Iniciando la creación de una nueva orden para el usuario: {}", detachedUser.getEmail());
 
-        // PASO1: validar que el usuario tenga la direction de entrega
-       Address shipAddress= req.getDeliveryAddress();
-       Address saveAddress= addressRepository.save(shipAddress);
+        // --- PASO 1: CARGAR LA ENTIDAD "USER" GESTIONADA ---
+        // Se carga una instancia "fresca" del usuario desde la BD para trabajar dentro de la transacción actual.
+        // Esto es CRUCIAL para evitar LazyInitializationException.
+        User managedUser = userRepository.findById(detachedUser.getId())
+                .orElseThrow(() -> new UserNotFoundException("El usuario autenticado con ID " + detachedUser.getId() +
+                                                             " no fue encontrado en la base de datos."));
 
+        // --- PASO 2: GESTIONAR LA DIRECCIÓN DE ENTREGA ---
+        // La petición envía un objeto Address completo. Lo guardamos para asegurarnos de que tiene un ID.
+        Address deliveryAddressFromRequest = req.getDeliveryAddress();
+        Address savedAddress = addressRepository.save(deliveryAddressFromRequest);
 
-       if(!user.getAddresses().contains(saveAddress)) {
-           user.getAddresses().add(saveAddress);
-           userRepository.save(user);
-       }
+        // Verificamos si esta dirección ya está asociada al perfil del usuario.
+        // Usamos la lista 'addresses' del 'managedUser', que ahora es accesible.
+        boolean addressExistsInProfile = managedUser.getAddresses().stream()
+                .anyMatch(addr -> addr.getId().equals(savedAddress.getId()));
 
-       // PASO2: validar que el restaurante exista
-       Restaurant restaurant = restaurantRepository.findById(req.getRestaurantId())
-               .orElseThrow(() -> new ResourceNotFoundException("Restaurante no encontrado"));
-
-       // PASO3: obtener el carrito del usuario
-       Cart cart = cartRepository.findByCustomerId(user.getId())
-               .orElseThrow(() -> new ResourceNotFoundException("Carrito no encontrado"));
-
-       if (cart.getCartItems().isEmpty()) {
-           throw new OperationNotAllowedException("El carrito del usuario esta vacio");
-       }
-
-       Order order = new Order();
-       order.setCustomer(user);
-       order.setRestaurant(restaurant);
-       order.setDeliveryAddress(saveAddress);
-       order.setCreatedAt(LocalDateTime.now());
-       order.setOrderStatus("PENDIENTE");
-
-       // paso4: convertir los items del carrito en items de la orden
-        List<OrderItem> createOrderItems = new ArrayList<>();
-        for (CartItem cartItems : cart.getCartItems()) {
-            OrderItem orderItem = new OrderItem();
-
-            orderItem.setFood(cartItems.getFood());
-            orderItem.setQuantity(cartItems.getQuantity());
-            orderItem.setTotalPrice(cartItems.getTotalPrice());
-            orderItem.setIngredients(cartItems.getIngredients());
-            orderItem.setOrder(order);
-            createOrderItems.add(orderItemRepository.save(orderItem));
+        if (!addressExistsInProfile) {
+            // Si no existe, la añadimos a su perfil.
+            managedUser.getAddresses().add(savedAddress);
+            // No es necesario un save explícito de 'managedUser' aquí, @Transactional se encargará.
+            log.info("Nueva dirección ID {} añadida al perfil del usuario '{}'.", savedAddress.getId(), managedUser.getEmail());
         }
-        order.setOrderItems(createOrderItems);
-        // calcular el total de la orden
-        order.setTotalAmount( cart.getTotal());
-        order.setTotalItems( cart.getCartItems().size());
-        Order savedOrder = orderRepository.save(order);
-        // limpiar el carrito del usuario
-        cartService.clearCart(user);
-        log.info("Orden ID {} creada con exito para el usuario: {}",savedOrder.getId() ,user.getEmail());
 
+        // --- PASO 3: VALIDAR RESTAURANTE Y CARRITO ---
+        Restaurant restaurant = restaurantRepository.findById(req.getRestaurantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no encontrado con ID: "
+                        + req.getRestaurantId()));
+
+        Cart cart = cartRepository.findByCustomerId(managedUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Carrito no encontrado para el usuario con ID: "
+                        + managedUser.getId()));
+
+        if (cart.getCartItems().isEmpty()) { // Asumiendo que el campo en Cart se llama 'items'
+            throw new OperationNotAllowedException("No se puede crear una orden desde un carrito vacío.");
+        }
+
+        // --- PASO 4: CREAR Y POBLAR LA ORDEN ---
+        Order order = new Order();
+        order.setCustomer(managedUser); // Usamos el usuario gestionado
+        order.setRestaurant(restaurant);
+        order.setDeliveryAddress(savedAddress);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setOrderStatus("PENDIENTE");
+
+        // --- PASO 5: CONVERTIR ITEMS DEL CARRITO A ITEMS DE ORDEN ---
+        List<OrderItem> orderItems = new ArrayList<>();
+        for (CartItem cartItem : cart.getCartItems()) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setFood(cartItem.getFood());
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setTotalPrice(cartItem.getTotalPrice());
+            orderItem.setIngredients(new ArrayList<>(cartItem.getIngredients()));
+            orderItem.setOrder(order); // Asociar el ítem a la nueva orden
+
+            orderItems.add(orderItem);
+        }
+        // Asignamos la lista a la orden. Cascade.ALL se encargará de guardarlos.
+        order.setOrderItems(orderItems);
+
+        // --- PASO 6: CALCULAR TOTALES Y GUARDAR LA ORDEN ---
+        order.setTotalAmount(cart.getTotal());
+        order.setTotalItems(cart.getCartItems().size());
+
+        Order savedOrder = orderRepository.save(order);
+
+        // --- PASO 7: LIMPIAR EL CARRITO ---
+        // Llamamos al servicio de carrito, que tiene la lógica de negocio para limpiarlo.
+        cartService.clearCart(managedUser);
+
+        log.info("Orden ID {} creada con éxito para el usuario: {}. El carrito ha sido vaciado.",
+                savedOrder.getId(), managedUser.getEmail());
+
+        // --- PASO 8: DEVOLVER EL DTO DE RESPUESTA ---
         return mapToOrderDto(savedOrder);
     }
 
@@ -254,6 +279,7 @@ public class OrderServiceImp implements OrderService {
         dto.setCreatedAt(order.getCreatedAt());
         dto.setDeliveryAddress(order.getDeliveryAddress());
         dto.setItems(order.getOrderItems().stream().map(this::mapToOrderItemDto).toList());
+        dto.setTotalItemCount(order.getOrderItems().size());
         return dto;
     }
 
@@ -269,10 +295,11 @@ public class OrderServiceImp implements OrderService {
         dto.setFood( mapToSimpleFoodDto(item.getFood()) );
         dto.setQuantity(item.getQuantity());
         dto.setTotalPrice(item.getTotalPrice());
+        dto.setIngredients(item.getIngredients());
         return dto;
     }
-    private FoodDto mapToSimpleFoodDto(Food food) {
-        FoodDto dto = new FoodDto();
+    private SimpleFoodDto mapToSimpleFoodDto(Food food) {
+        SimpleFoodDto dto = new SimpleFoodDto();
         dto.setId(food.getId());
         dto.setName(food.getName());
         return dto;

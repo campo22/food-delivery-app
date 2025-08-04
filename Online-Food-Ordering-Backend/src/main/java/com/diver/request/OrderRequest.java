@@ -11,6 +11,4 @@ public class OrderRequest {
     @NotNull
     private Address deliveryAddress;
 
-
-
 }

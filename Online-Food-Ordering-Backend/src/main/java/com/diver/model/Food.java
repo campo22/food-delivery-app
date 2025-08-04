@@ -53,8 +53,7 @@ public class    Food {
     /**
      * Lista de URLs o rutas de imágenes del plato
      */
-    @Column(length = 1000)
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private List<String> images;
 
     /**
